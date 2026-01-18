@@ -252,7 +252,7 @@ class DailyReportPlugin(Star):
                         items = container.find_all("div", class_="item")
 
                         # 限制数量，防止 Base64 导致 HTML 体积过大
-                        for item in items[:6]:
+                        for item in items[:9]:
                             movie = {}
 
                             # 1. 标题
