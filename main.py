@@ -84,7 +84,7 @@ class DailyReportPlugin(Star):
         return {"news": ["获取失败"]}
 
     async def fetch_ithome_news(self, session) -> List[str]:
-        """2. 抓取IT之家热榜 (已根据源码修正)"""
+        """抓取IT之家热榜"""
         url = "https://www.ithome.com/block/rank.html"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -119,7 +119,7 @@ class DailyReportPlugin(Star):
         return news_list[:10]
 
     async def fetch_dram_price(self, session) -> List[Dict]:
-        """3. 抓取DRAM价格 (已根据源码修正)"""
+        """3. 抓取DRAM价格 """
         url = "https://www.dramx.com/Price/DSD.html"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -179,7 +179,7 @@ class DailyReportPlugin(Star):
         return data
 
     async def fetch_bangumi_today(self, session) -> List[Dict]:
-        """6. 抓取今日番剧 (基于用户提供的层级优化)"""
+        """ 抓取今日番剧 (基于用户提供的层级优化)"""
         url = "https://bgm.tv/calendar"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -228,7 +228,7 @@ class DailyReportPlugin(Star):
         return anime_list
 
     async def fetch_openrouter_credits(self, session) -> Dict:
-        """7. 获取OpenRouter余额"""
+        """ 获取OpenRouter余额"""
         if not self.openrouter_key:
             return {"error": "未配置Key"}
 
@@ -256,7 +256,7 @@ class DailyReportPlugin(Star):
         return {"error": "API请求失败"}
 
     async def fetch_deepseek_balance(self, session) -> Dict:
-        """8. 获取 DeepSeek 余额"""
+        """ 获取 DeepSeek 余额"""
         if not self.deepseek_key:
             return {"name": "DeepSeek", "error": "未配置Key"}
 
@@ -385,7 +385,7 @@ class DailyReportPlugin(Star):
         return []
 
     async def fetch_exchange_rates(self, session) -> Dict:
-        """11. 获取汇率 (基准 CNY)"""
+        """获取汇率 (基准 CNY)"""
         if not self.exchangerate_key:
             return {"error": "获取失败"}
 
@@ -419,7 +419,7 @@ class DailyReportPlugin(Star):
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-
+        # 需要为cookies 设置 age_check_done=1，否则会返回年龄检查页面
         try:
             async with session.get(url, headers=headers,cookies={"age_check_done": "1"}) as resp:
                 # 获取网页内容文本
@@ -443,12 +443,12 @@ class DailyReportPlugin(Star):
                         })
                 return results
         except Exception as e:
-            logger.info(f"Error fetching DMM: {e}")
             logger.exception(f"Error fetching DMM: {e}")
             return []
 
     async def generate_html(self) -> Image:
         """聚合数据并渲染HTML"""
+        # 创建一个异步会话（不走代理）
         async with aiohttp.ClientSession(trust_env=False) as session:
             # 并发执行所有抓取任务
             results = await asyncio.gather(
@@ -456,14 +456,15 @@ class DailyReportPlugin(Star):
                 self.fetch_ithome_news(session),
                 self.fetch_dram_price(session),
                 self.fetch_bangumi_today(session),
-                self.fetch_openrouter_credits(session),
-                self.fetch_deepseek_balance(session),  # 5 DS余额查询
-                self.fetch_moonshot_balance(session),  # 6 Moonshot余额查询
-                self.fetch_siliconflow_balance(session), # 7 硅基流动余额查询
-                self.fetch_toutiao_hot(session),        # 8 今日头条热榜
-                self.fetch_weibo_hot(session),           # 9 微博热榜
-                self.fetch_exchange_rates(session),
+                self.fetch_openrouter_credits(session),       # 4 openrouter余额查询
+                self.fetch_deepseek_balance(session),         # 5 DS余额查询
+                self.fetch_moonshot_balance(session),         # 6 Moonshot余额查询
+                self.fetch_siliconflow_balance(session),      # 7 硅基流动余额查询
+                self.fetch_toutiao_hot(session),                # 8 今日头条热榜
+                self.fetch_weibo_hot(session),              # 9 微博热榜
+                self.fetch_exchange_rates(session),         # 10 汇率数据
             )
+        # 创建一个异步会话（走代理）
         async with aiohttp.ClientSession(trust_env=True,timeout=ClientTimeout(30)) as sessionProxy:
             # 并发执行所有抓取任务
             dmm_top_list = await asyncio.gather(
@@ -476,6 +477,7 @@ class DailyReportPlugin(Star):
             "MoonShot": results[6],
             "SiliconFlow": results[7],
         }
+        # 整理常规数据
         context_data = {
             "date": datetime.datetime.now().strftime("%Y-%m-%d %A"),
             "news_60s": results[0].get("news", []),
@@ -486,9 +488,9 @@ class DailyReportPlugin(Star):
             "dmm_top_list": dmm_top_list[0],
             "toutiao_hot": results[8],
             "weibo_hot": results[9],
-            "exchange_rates": results[10]  # [新增] 传递汇率数据
+            "exchange_rates": results[10]
         }
-        logger.info(f"Data: {context_data}")
+        logger.info(f"渲染数据: {context_data}")
         options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 500}
         img_result = await self.html_render(self.html_template, context_data, options=options)
         return img_result
