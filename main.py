@@ -6,7 +6,6 @@ import re
 
 from aiohttp import ClientTimeout
 from bs4 import BeautifulSoup
-import html
 import aiohttp
 
 from astrbot.api.event import filter, AstrMessageEvent
