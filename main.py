@@ -391,7 +391,6 @@ class DailyReportPlugin(Star):
             async with session.get(url, headers=headers,cookies={"age_check_done": "1"}) as resp:
                 # 获取网页内容文本
                 html_text = await resp.text()
-                logger.info(f"已获取 {html_text}")
                 #解析 HTML
                 soup = BeautifulSoup(html_text, 'html.parser')
                 results = []
