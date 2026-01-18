@@ -498,13 +498,12 @@ class DailyReportPlugin(Star):
         logger.info("Starting daily report generation...")
         try:
             html_content = await self.generate_html()
-            image_message_chain = MessageChain()
-            image_message_chain.chain = html_content
+            logger.info(f"HTML generation completed.{html_content}")
+            message_chain = MessageChain([Image.fromURL(html_content)])
             # 发送到配置的群
             for group_id in self.target_groups:
                 logger.info(f"向群组 {group_id} 发送图片")
-                await self.context.send_message(group_id,image_message_chain  # 假设返回的是bytes
-                )
+                await self.context.send_message(group_id,message_chain)
                 await asyncio.sleep(2)  # 防风控延迟
 
             logger.info("Daily report broadcast finished.")
