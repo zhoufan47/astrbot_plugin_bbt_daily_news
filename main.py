@@ -32,6 +32,7 @@ class DailyReportPlugin(Star):
         self.deepseek_key = config.get("deepseek_key", "")
         self.moonshot_key = config.get("moonshot_key", "")
         self.siliconflow_key = config.get("siliconflow_key", "")
+        self.yuafeng_key = config.get("yuafeng_key", "")
         # 本地读取模板文件
         # 获取当前文件 (main.py) 所在的目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -333,6 +334,53 @@ class DailyReportPlugin(Star):
             logger.error(f"Error fetching SiliconFlow: {e}")
         return {"name": "SiliconFlow", "status": "API请求失败","balance":"¥0.00"}
 
+    async def fetch_weibo_hot(self, session) -> List[Dict]:
+        """获取微博热榜"""
+        if not self.yuafeng_key:
+            return []
+
+        rst=[]
+        url = "http://api-v2.yuafeng.cn/API/jinri_hot.php"
+        params = {
+            'apikey': self.yuafeng_key,
+            'action': '微博热榜',
+            'page': '1',
+        }
+        try:
+            async with session.get(url, params=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    info = data.get("data", [])
+                    for item in info:
+                        rst.append({"title": item["title"]})
+        except Exception as e:
+            logger.error(f"Error fetching 微博热榜: {e}")
+        return []
+
+    async def fetch_toutiao_hot(self, session) -> List[Dict]:
+        """获取今日头条热榜"""
+        if not self.yuafeng_key:
+            return []
+
+        rst=[]
+        url = "http://api-v2.yuafeng.cn/API/jinri_hot.php"
+        params = {
+            'apikey': self.yuafeng_key,
+            'action': '今日头条热榜',
+            'page': '1',
+        }
+        try:
+            async with session.get(url, params=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    info = data.get("data", [])
+                    for item in info:
+                        rst.append({"title": item["title"]})
+        except Exception as e:
+            logger.error(f"Error fetching 今日头条热榜: {e}")
+        return []
+
+
     async def fetch_dmm_top(self, session) -> List[Dict]:
         url = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
         headers = {
@@ -377,9 +425,11 @@ class DailyReportPlugin(Star):
                 self.fetch_dram_price(session),
                 self.fetch_bangumi_today(session),
                 self.fetch_openrouter_credits(session),
-                self.fetch_deepseek_balance(session),  # 5 [新增]
-                self.fetch_moonshot_balance(session),  # 6 [新增]
-                self.fetch_siliconflow_balance(session)  # 7 [新增]
+                self.fetch_deepseek_balance(session),  # 5 DS余额查询
+                self.fetch_moonshot_balance(session),  # 6 Moonshot余额查询
+                self.fetch_siliconflow_balance(session), # 7 硅基流动余额查询
+                self.fetch_toutiao_hot(session),        # 8 今日头条热榜
+                self.fetch_weibo_hot(session)           # 9 微博热榜
             )
         async with aiohttp.ClientSession(trust_env=True,timeout=ClientTimeout(30)) as sessionProxy:
             # 并发执行所有抓取任务
@@ -401,6 +451,8 @@ class DailyReportPlugin(Star):
             "bangumi_list": results[3],
             "ai_balances": ai_balances,
             "dmm_top_list": dmm_top_list[0],
+            "toutiao_hot": results[8],
+            "weibo_hot": results[9]
         }
         logger.info(f"Data: {context_data}")
         options = {"quality": 95, "device_scale_factor_level": "ultra", "viewport_width": 500}

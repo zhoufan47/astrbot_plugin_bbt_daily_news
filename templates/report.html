@@ -123,6 +123,24 @@
         </div>
 
         <div class="section">
+            <div class="section-title">微博热榜</div>
+            <ul>
+                {% for news in weibo_hot %}
+                <li>{{ news }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">今日头条热榜</div>
+            <ul>
+                {% for news in toutiao_hot %}
+                <li>{{ news }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section">
             <div class="section-title">AI API 额度监控</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
 

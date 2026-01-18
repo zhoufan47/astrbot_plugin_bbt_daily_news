@@ -34,5 +34,11 @@
     "type": "string",
     "hint": "",
     "default": ""
+  },
+  "yuafeng_key": {
+    "description": "yuafeng_key",
+    "type": "string",
+    "hint": "",
+    "default": ""
   }
 }
