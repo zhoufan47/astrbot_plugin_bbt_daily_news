@@ -402,7 +402,9 @@ class DailyReportPlugin(Star):
                             "USD": f"{rates.get('USD', 0):.4f}",
                             "JPY": f"{rates.get('JPY', 0):.4f}",
                             "EUR": f"{rates.get('EUR', 0):.4f}",
-                            "GBP": f"{rates.get('GBP', 0):.4f}"
+                            "GBP": f"{rates.get('GBP', 0):.4f}",
+                            "TWD": f"{rates.get('TWD', 0):.4f}",
+                            "HKD": f"{rates.get('HKD', 0):.4f}"
                         }
                     else:
                         return {"error": "获取失败"}

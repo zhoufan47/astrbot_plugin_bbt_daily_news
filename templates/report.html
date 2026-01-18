@@ -96,13 +96,27 @@
             padding: 8px;
             font-size: 12px;
             color: #333;
-            /* 限制标题最多显示2行，超出省略，防止卡片高度不一 */
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
             line-height: 1.4;
+        }
+		/* --- 新增：双栏并排布局样式 --- */
+        .row-container {
+            display: flex;
+            gap: 20px; /* 两个列表之间的间距 */
+        }
+        .col-half {
+            flex: 1; /* 各占 50% */
+            min-width: 0; /* 关键：防止 flex 子元素被长文本撑大 */
+        }
+        /* 并排模式下，列表文字如果太长，显示省略号，保持整齐 */
+        .col-half ul li {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
 </head>
@@ -131,6 +145,16 @@
                         <div style="font-size: 12px; color: #888;">日元</div>
                     </div>
                     <div>
+                        <div style="font-size: 20px;">🇨🇳</div>
+                        <div style="font-weight: bold; color: #333;">{{ exchange_rates.TWD }}</div>
+                        <div style="font-size: 12px; color: #888;">新台币</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 20px;">🇭🇰</div>
+                        <div style="font-weight: bold; color: #333;">{{ exchange_rates.HKD }}</div>
+                        <div style="font-size: 12px; color: #888;">港币</div>
+                    </div>
+                    <div>
                         <div style="font-size: 20px;">🇪🇺</div>
                         <div style="font-weight: bold; color: #333;">{{ exchange_rates.EUR }}</div>
                         <div style="font-size: 12px; color: #888;">欧元</div>
@@ -152,24 +176,41 @@
             </ul>
         </div>
 
-        <div class="section">
-            <div class="section-title">微博热榜</div>
-            <ul>
-                {% for news in weibo_hot %}
-                <li>{{ news }}</li>
-                {% endfor %}
-            </ul>
+		<div class="section">
+            <div class="row-container">
+                <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                    <div class="col-half">
+                        <div class="section-title">微博热榜</div>
+                        <ul>
+                            {% for news in weibo_hot %}
+                            <li>{{ news }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                    <div class="col-half">
+                        <div class="section-title">今日头条热榜</div>
+                        <ul>
+                            {% for news in toutiao_hot %}
+                            <li>{{ news }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
         </div>
 
         <div class="section">
-            <div class="section-title">今日头条热榜</div>
+            <div class="section-title">IT之家热榜</div>
             <ul>
-                {% for news in toutiao_hot %}
-                <li>{{ news }}</li>
+                {% for item in news_ithome %}
+                <li>{{ item }}</li>
                 {% endfor %}
             </ul>
         </div>
-
+		
         <div class="section">
             <div class="section-title">AI API 额度监控</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -202,15 +243,6 @@
                 </div>
 
             </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">IT之家热榜</div>
-            <ul>
-                {% for item in news_ithome %}
-                <li>{{ item }}</li>
-                {% endfor %}
-            </ul>
         </div>
 
         <div class="section">
