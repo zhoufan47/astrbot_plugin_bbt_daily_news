@@ -3,6 +3,8 @@ import datetime
 import os
 from typing import Dict, List, Any
 import re
+
+from aiohttp import ClientTimeout
 from bs4 import BeautifulSoup
 import html
 import aiohttp
@@ -338,42 +340,31 @@ class DailyReportPlugin(Star):
         }
 
         try:
-            async with session.get(url, headers=headers) as resp:
-                text = await resp.text()
-                lines = re.findall(r'<td class="line-content">(.*?)</td>', text)
-                real_html_parts = []
-                for line in lines:
-                    # 去除高亮用的 HTML 标签 (如 <span class="html-tag">)
-                    clean_line = re.sub(r'<[^>]+>', '', line)
-                    # 反转义字符 (例如将 &lt; 变回 <)
-                    real_code = html.unescape(clean_line)
-                    real_html_parts.append(real_code)
-
-                # 合并成完整的原始 HTML 字符串
-                raw_html = "\n".join(real_html_parts)
-
-                # 3. 解析数据
-                soup = BeautifulSoup(raw_html, 'html.parser')
+            async with session.get(url, headers=headers,cookies={"age_check_done": "1"}) as resp:
+                # 获取网页内容文本
+                html_text = await resp.text()
+                logger.info(f"已获取 {html_text}")
+                #解析 HTML
+                soup = BeautifulSoup(html_text, 'html.parser')
                 results = []
 
-                # DMM 列表页的封面图通常有一个特定的 id 格式：id="package-src-..."
-                # 这是一个非常精准的定位方式
+                # 提取数据
+                # 逻辑：查找所有 id 以 "package-src-" 开头的 img 标签
                 targets = soup.find_all('img', id=re.compile(r'^package-src-'))
 
                 for img in targets:
                     title = img.get('alt')
                     src = img.get('src')
 
-                    # 简单过滤：确保标题存在且非空
                     if title and src:
                         results.append({
                             "title": title,
                             "cover": src
                         })
-
                 return results
         except Exception as e:
-            logger.error(f"Error fetching DMM TOP: {e}")
+            logger.info(f"Error fetching DMM: {e}")
+            logger.exception(f"Error fetching DMM: {e}")
             return []
 
     async def generate_html(self) -> Image:
@@ -388,8 +379,12 @@ class DailyReportPlugin(Star):
                 self.fetch_openrouter_credits(session),
                 self.fetch_deepseek_balance(session),  # 5 [新增]
                 self.fetch_moonshot_balance(session),  # 6 [新增]
-                self.fetch_siliconflow_balance(session),  # 7 [新增]
-                self.fetch_dmm_top(session),
+                self.fetch_siliconflow_balance(session)  # 7 [新增]
+            )
+        async with aiohttp.ClientSession(trust_env=True,timeout=ClientTimeout(30)) as sessionProxy:
+            # 并发执行所有抓取任务
+            dmm_top_list = await asyncio.gather(
+                self.fetch_dmm_top(sessionProxy),
             )
         # 整理 AI 余额数据列表
         ai_balances = {
@@ -405,7 +400,7 @@ class DailyReportPlugin(Star):
             "dram_prices": results[2],
             "bangumi_list": results[3],
             "ai_balances": ai_balances,
-            "dmm_top_list": results[8],
+            "dmm_top_list": dmm_top_list[0],
         }
         logger.info(f"Data: {context_data}")
         options = {"quality": 95, "device_scale_factor_level": "ultra", "viewport_width": 500}

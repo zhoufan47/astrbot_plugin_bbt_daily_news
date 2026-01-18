@@ -63,6 +63,47 @@
             text-overflow: ellipsis;
             line-height: 1.4;
         }
+        .jav-grid {
+            display: grid;
+            /* 3列布局，自动填满 */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .jav-card {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+        .jav-cover-box {
+            width: 100%;
+            /* 保持封面比例，例如 3:4 */
+            aspect-ratio: 3 / 4;
+            background-color: #eee;
+            position: relative;
+        }
+        .jav-cover-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 裁剪填充，保证整齐 */
+            display: block;
+        }
+        .jav-title {
+            padding: 8px;
+            font-size: 12px;
+            color: #333;
+            /* 限制标题最多显示2行，超出省略，防止卡片高度不一 */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -161,13 +202,13 @@
             {% if not dmm_top_list %}
                 <p style="color:#999; font-size:12px;">获取失败</p>
             {% else %}
-                <div class="anime-grid">
-                    {% for anime in dmm_top_list[:9] %}
-                    <div class="anime-card">
-                        <div class="anime-cover-box">
-                            <img src="{{ anime.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
+                <div class="jav-grid">
+                    {% for dmm in dmm_top_list[:9] %}
+                    <div class="jav-card">
+                        <div class="jav-cover-box">
+                            <img src="{{ dmm.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
                         </div>
-                        <div class="anime-title">{{ anime.title }}</div>
+                        <div class="jav-title">{{ dmm.title }}</div>
                     </div>
                     {% endfor %}
                 </div>
