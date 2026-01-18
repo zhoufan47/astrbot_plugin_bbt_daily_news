@@ -1,0 +1,38 @@
+{
+  "target_groups": {
+    "description": "需要推送60s新闻的群组唯一标识符列表",
+    "type": "list",
+    "hint": "填写需要接收60s新闻推送的群组唯一标识符，如: 你的平台名称(自己起的):GroupMessage:1350989414, napcat:FriendMessage:123456, telegram:FriendMessage:123456",
+    "default": ["这里填你的平台名称:GroupMessage:这里填写你的群号"]
+  },
+  "send_time": {
+    "description": "推送时间(以服务器时区为准)",
+    "type": "string",
+    "hint": "填写推送的时间，如: 08:00, 12:30, 18:00",
+    "default": "08:00"
+  },
+  "openrouter_key": {
+    "description": "openrouter_key",
+    "type": "string",
+    "hint": "",
+    "default": ""
+  },
+    "deepseek_key": {
+    "description": "deepseek_key",
+    "type": "string",
+    "hint": "",
+    "default": ""
+  },
+    "moonshot_key": {
+    "description": "moonshot_key",
+    "type": "string",
+    "hint": "",
+    "default": ""
+  },
+    "siliconflow_key": {
+    "description": "siliconflow_key",
+    "type": "string",
+    "hint": "",
+    "default": ""
+  }
+}
