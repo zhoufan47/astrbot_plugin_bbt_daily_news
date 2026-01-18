@@ -459,7 +459,8 @@ class DailyReportPlugin(Star):
                 self.fetch_moonshot_balance(session),  # 6 Moonshot余额查询
                 self.fetch_siliconflow_balance(session), # 7 硅基流动余额查询
                 self.fetch_toutiao_hot(session),        # 8 今日头条热榜
-                self.fetch_weibo_hot(session)           # 9 微博热榜
+                self.fetch_weibo_hot(session),           # 9 微博热榜
+                self.fetch_exchange_rates(session),
             )
         async with aiohttp.ClientSession(trust_env=True,timeout=ClientTimeout(30)) as sessionProxy:
             # 并发执行所有抓取任务
@@ -482,7 +483,8 @@ class DailyReportPlugin(Star):
             "ai_balances": ai_balances,
             "dmm_top_list": dmm_top_list[0],
             "toutiao_hot": results[8],
-            "weibo_hot": results[9]
+            "weibo_hot": results[9],
+            "exchange_rates": results[10]  # [新增] 传递汇率数据
         }
         logger.info(f"Data: {context_data}")
         options = {"quality": 95, "device_scale_factor_level": "ultra", "viewport_width": 500}
