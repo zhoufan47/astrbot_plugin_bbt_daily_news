@@ -40,5 +40,10 @@
     "type": "string",
     "hint": "",
     "default": ""
+  },
+  "exchangerate_key":{
+    "description": "汇率查询KEY",
+    "type": "string",
+    "default": ""
   }
 }

@@ -112,7 +112,37 @@
             <h1>棒棒糖的每日早报</h1>
             <p>{{ date }}</p>
         </div>
-
+        <div class="section" style="background: #fff8e1; border-color: #ffe082;">
+            <div class="section-title" style="color: #f57f17;">
+                <span style="margin-right: 5px;">💰</span> 汇率速递 (1 人民币 兑换)
+            </div>
+            {% if exchange_rates.error %}
+                <div style="color: #d32f2f; font-size: 13px;">{{ exchange_rates.error }}</div>
+            {% else %}
+                <div style="display: flex; justify-content: space-between; text-align: center; font-size: 14px;">
+                    <div>
+                        <div style="font-size: 20px;">🇺🇸</div>
+                        <div style="font-weight: bold; color: #333;">{{ exchange_rates.USD }}</div>
+                        <div style="font-size: 12px; color: #888;">美元</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 20px;">🇯🇵</div>
+                        <div style="font-weight: bold; color: #333;">{{ exchange_rates.JPY }}</div>
+                        <div style="font-size: 12px; color: #888;">日元</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 20px;">🇪🇺</div>
+                        <div style="font-weight: bold; color: #333;">{{ exchange_rates.EUR }}</div>
+                        <div style="font-size: 12px; color: #888;">欧元</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 20px;">🇬🇧</div>
+                        <div style="font-weight: bold; color: #333;">{{ exchange_rates.GBP }}</div>
+                        <div style="font-size: 12px; color: #888;">英镑</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
         <div class="section">
             <div class="section-title">新闻速读</div>
             <ul>

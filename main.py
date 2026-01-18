@@ -33,6 +33,7 @@ class DailyReportPlugin(Star):
         self.moonshot_key = config.get("moonshot_key", "")
         self.siliconflow_key = config.get("siliconflow_key", "")
         self.yuafeng_key = config.get("yuafeng_key", "")
+        self.exchangerate_key = config.get("exchangerate_key", "")
         # 本地读取模板文件
         # 获取当前文件 (main.py) 所在的目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -383,6 +384,33 @@ class DailyReportPlugin(Star):
             logger.error(f"Error fetching 今日头条热榜: {e}")
         return []
 
+    async def fetch_exchange_rates(self, session) -> Dict:
+        """11. 获取汇率 (基准 CNY)"""
+        if not self.exchangerate_key:
+            return {"error": "获取失败"}
+
+        url = f"https://v6.exchangerate-api.com/v6/{self.exchangerate_key}/latest/CNY"
+        try:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    rates = data.get("conversion_rates", {})
+
+                    # 只有 API 返回成功才处理
+                    if data.get("result") == "success":
+                        return {
+                            "USD": f"{rates.get('USD', 0):.4f}",
+                            "JPY": f"{rates.get('JPY', 0):.4f}",
+                            "EUR": f"{rates.get('EUR', 0):.4f}",
+                            "GBP": f"{rates.get('GBP', 0):.4f}"
+                        }
+                    else:
+                        return {"error": "获取失败"}
+                return {"error": "获取失败"}
+
+        except Exception as e:
+            logger.error(f"Error fetching Exchange Rates: {e}")
+            return {"error": "获取失败"}
 
     async def fetch_dmm_top(self, session) -> List[Dict]:
         url = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
