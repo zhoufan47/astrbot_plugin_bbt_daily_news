@@ -489,7 +489,7 @@ class DailyReportPlugin(Star):
             "exchange_rates": results[10]  # [新增] 传递汇率数据
         }
         logger.info(f"Data: {context_data}")
-        options = {"quality": 95, "device_scale_factor_level": "ultra", "viewport_width": 500}
+        options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 500}
         img_result = await self.html_render(self.html_template, context_data, options=options)
         return img_result
 
