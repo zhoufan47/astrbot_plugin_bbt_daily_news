@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>每日简报</title>
+    <style>
+        body { font-family: 'Microsoft YaHei', sans-serif; background-color: #f0f2f5; padding: 20px; width: 600px; }
+        .container { background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .header p { margin: 5px 0 0; opacity: 0.8; font-size: 14px; }
+        
+        .section { padding: 15px 20px; border-bottom: 1px solid #eee; }
+        .section-title { font-weight: bold; color: #333; margin-bottom: 10px; display: flex; align-items: center; }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background: #764ba2; margin-right: 8px; border-radius: 2px; }
+        
+        ul { padding-left: 20px; margin: 0; }
+        li { margin-bottom: 5px; color: #555; font-size: 14px; }
+        
+        .tag { background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 5px; }
+        .price-up { color: #d9534f; }
+        .price-down { color: #5cb85c; }
+        
+        .footer { text-align: center; padding: 10px; color: #999; font-size: 12px; background: #fafafa; }
+        .anime-grid {
+            display: grid;
+            /* 3列布局，自动填满 */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .anime-card {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+        .anime-cover-box {
+            width: 100%;
+            /* 保持封面比例，例如 3:4 */
+            aspect-ratio: 3 / 4;
+            background-color: #eee;
+            position: relative;
+        }
+        .anime-cover-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 裁剪填充，保证整齐 */
+            display: block;
+        }
+        .anime-title {
+            padding: 8px;
+            font-size: 12px;
+            color: #333;
+            /* 限制标题最多显示2行，超出省略，防止卡片高度不一 */
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>棒棒糖的每日早报</h1>
+            <p>{{ date }}</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">新闻速读</div>
+            <ul>
+                {% for news in news_60s %}
+                <li>{{ news }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">AI API 额度监控</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+
+                <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                    <div style="font-weight: bold; color: #333;">OpenRouter</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        <span>每日用量: <b>{{ ai_balances.OpenRouter.usage_daily }}</b></span><br>
+                        <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.OpenRouter.limit_remaining }}</b></span>
+                    </div>
+                </div>
+
+                <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                    <div style="font-weight: bold; color: #333;">DeepSeek</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.DeepSeek.balance }}</b></span>
+                    </div>
+                </div>
+                <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                    <div style="font-weight: bold; color: #333;">MoonShot</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.MoonShot.balance }}</b></span>
+                    </div>
+                </div>
+                <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                    <div style="font-weight: bold; color: #333;">SiliconFlow</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.SiliconFlow.balance }}</b></span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">IT之家热榜</div>
+            <ul>
+                {% for item in news_ithome %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">国际 DRAM 价格</div>
+            <table style="width: 100%; font-size: 13px; text-align: left;">
+                <tr style="color: #999;"><th>产品</th><th>价格（美元）</th><th>涨幅</th></tr>
+                {% for item in dram_prices %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.price }}</td>
+                    <td class="{{ 'price-up' if '+' in item.change else 'price-down' }}">{{ item.change }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="section-title">今日放送动画</div>
+            {% if not bangumi_list %}
+                <p style="color:#999; font-size:12px;">今日无更新或获取失败</p>
+            {% else %}
+                <div class="anime-grid">
+                    {% for anime in bangumi_list %}
+                    <div class="anime-card">
+                        <div class="anime-cover-box">
+                            <img src="{{ anime.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
+                        </div>
+                        <div class="anime-title">{{ anime.title }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <div class="section-title">DMM今日TOP</div>
+            {% if not dmm_top_list %}
+                <p style="color:#999; font-size:12px;">获取失败</p>
+            {% else %}
+                <div class="anime-grid">
+                    {% for anime in dmm_top_list[:9] %}
+                    <div class="anime-card">
+                        <div class="anime-cover-box">
+                            <img src="{{ anime.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
+                        </div>
+                        <div class="anime-title">{{ anime.title }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="footer">
+            Powered by AstrBot
+        </div>
+    </div>
+</body>
+</html>

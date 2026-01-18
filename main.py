@@ -4,6 +4,7 @@ import os
 from typing import Dict, List, Any
 import re
 from bs4 import BeautifulSoup
+import html
 import aiohttp
 
 from astrbot.api.event import filter, AstrMessageEvent
@@ -330,6 +331,51 @@ class DailyReportPlugin(Star):
             logger.error(f"Error fetching SiliconFlow: {e}")
         return {"name": "SiliconFlow", "status": "API请求失败","balance":"¥0.00"}
 
+    async def fetch_dmm_top(self, session) -> List[Dict]:
+        url = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+
+        try:
+            async with session.get(url, headers=headers) as resp:
+                text = await resp.text()
+                lines = re.findall(r'<td class="line-content">(.*?)</td>', text)
+                real_html_parts = []
+                for line in lines:
+                    # 去除高亮用的 HTML 标签 (如 <span class="html-tag">)
+                    clean_line = re.sub(r'<[^>]+>', '', line)
+                    # 反转义字符 (例如将 &lt; 变回 <)
+                    real_code = html.unescape(clean_line)
+                    real_html_parts.append(real_code)
+
+                # 合并成完整的原始 HTML 字符串
+                raw_html = "\n".join(real_html_parts)
+
+                # 3. 解析数据
+                soup = BeautifulSoup(raw_html, 'html.parser')
+                results = []
+
+                # DMM 列表页的封面图通常有一个特定的 id 格式：id="package-src-..."
+                # 这是一个非常精准的定位方式
+                targets = soup.find_all('img', id=re.compile(r'^package-src-'))
+
+                for img in targets:
+                    title = img.get('alt')
+                    src = img.get('src')
+
+                    # 简单过滤：确保标题存在且非空
+                    if title and src:
+                        results.append({
+                            "title": title,
+                            "cover": src
+                        })
+
+                return results
+        except Exception as e:
+            logger.error(f"Error fetching DMM TOP: {e}")
+            return []
+
     async def generate_html(self) -> Image:
         """聚合数据并渲染HTML"""
         async with aiohttp.ClientSession(trust_env=False) as session:
@@ -342,7 +388,8 @@ class DailyReportPlugin(Star):
                 self.fetch_openrouter_credits(session),
                 self.fetch_deepseek_balance(session),  # 5 [新增]
                 self.fetch_moonshot_balance(session),  # 6 [新增]
-                self.fetch_siliconflow_balance(session)  # 7 [新增]
+                self.fetch_siliconflow_balance(session),  # 7 [新增]
+                self.fetch_dmm_top(session),
             )
         # 整理 AI 余额数据列表
         ai_balances = {
@@ -357,7 +404,8 @@ class DailyReportPlugin(Star):
             "news_ithome": results[1],
             "dram_prices": results[2],
             "bangumi_list": results[3],
-            "ai_balances": ai_balances
+            "ai_balances": ai_balances,
+            "dmm_top_list": results[8],
         }
         logger.info(f"Data: {context_data}")
         options = {"quality": 95, "device_scale_factor_level": "ultra", "viewport_width": 500}
@@ -389,5 +437,15 @@ class DailyReportPlugin(Star):
         """手动触发日报测试"""
         yield event.plain_result("正在生成日报，请稍候...")
         # 生成HTML图片
+        html = await self.generate_html()
+        yield event.image_result(html)
+
+    @filter.llm_tool(name="today_news")
+    async def report_tody_news(self, event: AstrMessageEvent):
+        """
+        发送今天的早报，看看今天发生了什么。
+
+
+        """
         html = await self.generate_html()
         yield event.image_result(html)
