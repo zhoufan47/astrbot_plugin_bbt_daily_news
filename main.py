@@ -7,6 +7,7 @@ import re
 from aiohttp import ClientTimeout
 from bs4 import BeautifulSoup
 import aiohttp
+import base64
 
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
@@ -18,7 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 
-@register("daily_report", "YourName", "每日综合简报插件", "1.0.0")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.4.1")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -207,7 +208,11 @@ class DailyReportPlugin(Star):
                         # --- 1. 获取标题 ---
                         link_tag = item.find("a")
                         if link_tag:
-                            data["title"] = link_tag.get_text(strip=True)
+                            title = link_tag.get_text(strip=True)
+                            # 如果标题为空，直接跳过
+                            if not title:
+                                continue
+                            data["title"] = title
 
                         style_attr = item.get('style', '')
                         # --- 2. 获取图片 (双重策略) ---
@@ -225,6 +230,66 @@ class DailyReportPlugin(Star):
             logger.error(f"Error fetching Bangumi: {e}")
 
         return anime_list
+
+    async def fetch_douban_movies(self, session) -> List[Dict]:
+        """12. 获取豆瓣近期上映电影 (转 Base64 版)"""
+        url = "https://movie.douban.com/cinema/later/beijing/"
+        # 豆瓣对 Referer 检查非常严格
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://movie.douban.com/",
+        }
+
+        movie_list = []
+        try:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status == 200:
+                    text = await resp.text()
+                    soup = BeautifulSoup(text, 'lxml')
+
+                    container = soup.find("div", id="showing-soon")
+                    if container:
+                        items = container.find_all("div", class_="item")
+
+                        # 限制数量，防止 Base64 导致 HTML 体积过大
+                        for item in items[:6]:
+                            movie = {}
+
+                            # 1. 标题
+                            title_tag = item.find("h3").find("a")
+                            movie["title"] = title_tag.get_text(strip=True)
+
+                            # 2. 封面处理 (关键修改)
+                            img_tag = item.find("a", class_="thumb").find("img")
+                            raw_cover_url = ""
+                            if img_tag:
+                                raw_cover_url = img_tag.get("src", "")
+
+                            # 下载并转 Base64
+                            if raw_cover_url:
+                                movie["cover"] = await self._url_to_base64(
+                                    session,
+                                    raw_cover_url,
+                                    referer="https://movie.douban.com/"
+                                )
+                            else:
+                                movie["cover"] = ""
+
+                            # 3. 信息列表
+                            info_ul = item.find("ul")
+                            if info_ul:
+                                lis = info_ul.find_all("li")
+                                if len(lis) >= 1:
+                                    movie["date"] = lis[0].get_text(strip=True)
+                                if len(lis) >= 2:
+                                    movie["type"] = lis[1].get_text(strip=True)
+
+                            movie_list.append(movie)
+
+        except Exception as e:
+            logger.error(f"Error fetching Douban Movies: {e}")
+
+        return movie_list
 
     async def fetch_openrouter_credits(self, session) -> Dict:
         """ 获取OpenRouter余额"""
@@ -462,6 +527,7 @@ class DailyReportPlugin(Star):
                 self.fetch_toutiao_hot(session),                # 8 今日头条热榜
                 self.fetch_weibo_hot(session),              # 9 微博热榜
                 self.fetch_exchange_rates(session),         # 10 汇率数据
+                self.fetch_douban_movies(session)  # 11 豆瓣电影
             )
         # 创建一个异步会话（走代理）
         async with aiohttp.ClientSession(trust_env=True,timeout=ClientTimeout(30)) as sessionProxy:
@@ -487,7 +553,8 @@ class DailyReportPlugin(Star):
             "dmm_top_list": dmm_top_list[0],
             "toutiao_hot": results[8],
             "weibo_hot": results[9],
-            "exchange_rates": results[10]
+            "exchange_rates": results[10],
+            "movie_list": results[11]
         }
         logger.info(f"渲染数据: {context_data}")
         options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 500}
@@ -511,6 +578,35 @@ class DailyReportPlugin(Star):
 
         except Exception as e:
             logger.error(f"Broadcast failed: {e}", exc_info=True)
+
+    async def _url_to_base64(self, session, url: str, referer: str = "") -> str:
+        """辅助方法：下载图片并转为 Base64"""
+        if not url:
+            return ""
+
+        # 针对豆瓣等防盗链网站设置 Referer
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        if referer:
+            headers["Referer"] = referer
+
+        try:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status == 200:
+                    # 获取图片二进制数据
+                    content = await resp.read()
+                    # 获取 MIME 类型 (如 image/jpeg, image/webp)
+                    mime_type = resp.headers.get("Content-Type", "image/jpeg")
+                    # 编码为 Base64
+                    b64_str = base64.b64encode(content).decode("utf-8")
+                    # 拼接标准 Data URI 格式
+                    return f"data:{mime_type};base64,{b64_str}"
+        except Exception as e:
+            logger.warning(f"Failed to download image {url}: {e}")
+
+        # 下载失败返回空或保留原 URL (这里返回空字符串，模板里会显示默认图)
+        return ""
 
     # 也可以添加一个手动指令用于测试
     @filter.command("test_report")
