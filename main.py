@@ -352,7 +352,9 @@ class DailyReportPlugin(Star):
                     data = await resp.json()
                     info = data.get("data", [])
                     for item in info:
-                        rst.append({"title": item["title"]})
+                        rst.append(item["title"])
+                    return rst
+
         except Exception as e:
             logger.error(f"Error fetching 微博热榜: {e}")
         return []
@@ -375,7 +377,8 @@ class DailyReportPlugin(Star):
                     data = await resp.json()
                     info = data.get("data", [])
                     for item in info:
-                        rst.append({"title": item["title"]})
+                        rst.append(item["title"])
+                    return rst
         except Exception as e:
             logger.error(f"Error fetching 今日头条热榜: {e}")
         return []
