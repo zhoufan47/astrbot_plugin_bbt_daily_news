@@ -625,7 +625,7 @@ class DailyReportPlugin(Star):
         yield event.image_result(html)
 
     @filter.llm_tool(name="today_news")
-    async def report_tody_news(self, event: AstrMessageEvent):
+    async def report_today_news(self, event: AstrMessageEvent):
         """
         发送今天的早报，看看今天发生了什么。
 
