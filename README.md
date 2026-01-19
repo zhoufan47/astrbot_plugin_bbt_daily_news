@@ -25,24 +25,26 @@
 
 本插件的数据来源于互联网公开接口及网页抓取，具体如下：
 
-| 模块 | 数据内容 | 数据来源 | 来源网址 | 获取方式 |
-| :--- | :--- | :--- | :--- | :--- |
-| **新闻速读** | 每日 60 秒读懂世界 | Viki API | `https://60s-api.viki.moe/` | API 调用 |
-| **科技热点** | IT之家热榜 (日榜) | IT之家 (ITHome) | `https://www.ithome.com/block/rank.html` | 网页抓取 |
-| **硬件价格** | 国际 DRAM 颗粒现货价格 | 全球半导体观察 | `https://www.dramx.com/Price/DSD.html` | 网页抓取 |
-| **新番放送** | 每日动画更新及封面 | 番组计划 (Bangumi) | `https://bgm.tv/calendar` | 网页抓取 |
-| **实时汇率** | 法币汇率 (CNY 基准) | ExchangeRate-API | `https://www.exchangerate-api.com/` | API 调用 |
-| **AI 额度** | 账户余额/用量 | OpenRouter | `https://openrouter.ai/` | 官方 API |
-| **AI 额度** | 账户余额 | DeepSeek | `https://platform.deepseek.com/` | 官方 API |
-| **AI 额度** | 账户余额 | Moonshot (Kimi) | `https://platform.moonshot.cn/` | 官方 API |
-| **AI 额度** | 账户余额 | 硅基流动 (SiliconFlow) | `https://siliconflow.cn/` | 官方 API |
-| **娱乐/其他** | 榜单数据 (视模板而定) | 微博/头条/DMM | 对应官网 | 网页抓取 |
+| 模块        | 数据内容           | 数据来源 | 来源网址 | 获取方式 |
+|:----------|:---------------| :--- | :--- | :--- |
+| **新闻速读**  | 每日 60 秒读懂世界    | Viki API | `https://60s-api.viki.moe/` | API 调用 |
+| **科技热点**  | IT之家热榜 (日榜)    | IT之家 (ITHome) | `https://www.ithome.com/block/rank.html` | 网页抓取 |
+| **硬件价格**  | 国际 DRAM 颗粒现货价格 | 全球半导体观察 | `https://www.dramx.com/Price/DSD.html` | 网页抓取 |
+| **新番放送**  | 每日动画更新及封面      | 番组计划 (Bangumi) | `https://bgm.tv/calendar` | 网页抓取 |
+| **实时汇率**  | 法币汇率 (CNY 基准)  | ExchangeRate-API | `https://www.exchangerate-api.com/` | API 调用 |
+| **AI 额度** | 账户余额/用量        | OpenRouter | `https://openrouter.ai/` | 官方 API |
+| **AI 额度** | 账户余额           | DeepSeek | `https://platform.deepseek.com/` | 官方 API |
+| **AI 额度** | 账户余额           | Moonshot (Kimi) | `https://platform.moonshot.cn/` | 官方 API |
+| **AI 额度** | 账户余额           | 硅基流动 (SiliconFlow) | `https://siliconflow.cn/` | 官方 API |
+| **娱乐**    | 游戏发售日          | RAWG | `https://rawg.io/`'` | API 调用 |
+| **其他**    | 榜单数据 (视模板而定)   | 微博/头条/DMM | 对应官网 | 网页抓取 |
 
 > **注意**：\
 > **IT之家、DRAMx、Bangumi** 可能会因为目标网站改版而失效，请留意插件更新。\
 > **汇率** 数据来源 [ExchangeRate-API](https://www.exchangerate-api.com/)，请自行注册并获取 API 密钥。\
 > **AI 额度** 数据来源使用官方 API，请在配置页面填写 API 密钥。\
-> **微博、头条** 数据来源 [枫雨API](https://api-v2.yuafeng.cn/) 请自行注册
+> **微博、头条** 数据来源 [枫雨API](https://api-v2.yuafeng.cn/) 请自行注册 \
+> **游戏发售日** 数据来源 [RAWG](https://rawg.io/) 请自行注册
 
 ## 🛠️ 安装与依赖
 

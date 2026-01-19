@@ -46,6 +46,16 @@
     "type": "string",
     "default": ""
   },
+  "rawg_key":{
+    "description": "rawg_key-api 查询KEY",
+    "type": "string",
+    "default": ""
+  },
+  "game_release_date_threshold":{
+    "description": "发售游戏查询阈值，单位（天）",
+    "type": "int",
+    "default": 14
+  },
   "r18_mode":{
     "description": "R18模式",
     "type": "bool",

@@ -4,7 +4,9 @@ import os
 from typing import Dict, List, Any
 import re
 import traceback
+import io
 
+from PIL import Image as PILImage
 from aiohttp import ClientTimeout
 from bs4 import BeautifulSoup
 import aiohttp
@@ -20,7 +22,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 user_agent= "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.4.6")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.0")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -36,6 +38,8 @@ class DailyReportPlugin(Star):
         self.yuafeng_key = config.get("yuafeng_key", "")
         self.exchangerate_key = config.get("exchangerate_key", "")
         self.r18_mode = config.get("r18_mode", False)
+        self.rawg_key = config.get("rawg_key", "")
+        self.game_release_date_threshold = config.get("game_release_date_threshold", 14)
         # 本地读取模板文件
         # 获取当前文件 (main.py) 所在的目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -515,6 +519,73 @@ class DailyReportPlugin(Star):
             logger.exception(f"Error fetching DMM: {e}")
             return []
 
+    async def fetch_rawg_games(self, session) -> List[Dict]:
+        if not self.rawg_key:
+            return []
+
+        # 计算日期范围：未来 {self.game_release_date_threshold} 天
+        today = datetime.date.today()
+        future = today + datetime.timedelta(days=self.game_release_date_threshold)
+        dates_str = f"{today},{future}"
+
+        # stores=1(Steam), 3(PlayStation Store), 6(Nintendo Store)
+        # ordering=-released 表示发售日期倒序，无-表示正序
+        url = f"https://api.rawg.io/api/games?key={self.rawg_key}&dates={dates_str}&stores=1,3,6&ordering=released&page_size=9"
+
+        games_list = []
+        try:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    results = data.get("results", [])
+
+                    for item in results:
+                        game = {}
+
+                        # 1. 标题
+                        game["title"] = item.get("name", "Unknown")
+
+                        # 2. 封面 (转 Base64)
+                        raw_bg = item.get("background_image", "")
+                        if raw_bg:
+                            # RAWG 图片支持裁剪参数，可以加 ?width=400 减小体积，但这里直接下原图也不大
+                            game["cover"] = await self._url_to_base64(session, raw_bg, width=512)
+                        else:
+                            game["cover"] = ""
+
+                        # 3. 平台信息
+                        # 使用 parent_platforms 获取大类 (PC, PlayStation, Xbox, Nintendo)
+                        platforms_data = item.get("parent_platforms", [])
+                        p_names = []
+                        if platforms_data:
+                            for p_wrapper in platforms_data:
+                                p_info = p_wrapper.get("platform", {})
+                                p_name = p_info.get("name", "")
+                                if p_name == "PC":
+                                    p_names.append("PC")
+                                elif p_name == "PlayStation":
+                                    p_names.append("PlayStation")
+                                elif p_name == "Xbox":
+                                    p_names.append("Xbox")
+                                elif p_name == "Nintendo":
+                                    p_names.append("NS")
+                                elif p_name == "Apple Macintosh":
+                                    p_names.append("Mac")
+                                else:
+                                    p_names.append(p_name)
+
+                        game["platforms"] = " / ".join(p_names) if p_names else "多平台"
+
+                        # 4. 发售日期
+                        game["release"] = item.get("released", "")[5:]  # 只取 MM-DD
+
+                        games_list.append(game)
+
+        except Exception as e:
+            logger.error(f"Error fetching RAWG Games: {e}")
+
+        return games_list
+
     async def generate_html(self) -> Image:
         """聚合数据并渲染HTML"""
         # 创建一个异步会话（不走代理）
@@ -532,7 +603,8 @@ class DailyReportPlugin(Star):
                 self.fetch_toutiao_hot(session),                # 8 今日头条热榜
                 self.fetch_weibo_hot(session),              # 9 微博热榜
                 self.fetch_exchange_rates(session),         # 10 汇率数据
-                self.fetch_douban_movies(session)  # 11 豆瓣电影
+                self.fetch_douban_movies(session),          # 11 豆瓣电影
+                self.fetch_rawg_games(session)
             )
         # 创建一个异步会话（走代理）
         async with aiohttp.ClientSession(trust_env=True,timeout=ClientTimeout(30)) as sessionProxy:
@@ -563,7 +635,8 @@ class DailyReportPlugin(Star):
             "toutiao_hot": results[8],
             "weibo_hot": results[9],
             "exchange_rates": results[10],
-            "movie_list": results[11]
+            "movie_list": results[11],
+            "game_list": results[12]
         }
         logger.info(f"渲染数据: {context_data}")
         options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 505}
@@ -588,14 +661,13 @@ class DailyReportPlugin(Star):
         except Exception as e:
             logger.error(f"Broadcast failed: {e}", exc_info=True)
 
-    async def _url_to_base64(self, session, url: str, referer: str = "") -> str:
-        """辅助方法：下载图片并转为 Base64"""
+    async def _url_to_base64(self, session, url: str, referer: str = "", width: int = 0) -> str:
+        """辅助方法：下载图片并转为 Base64 (支持本地缩放)"""
         if not url:
             return ""
 
-        # 针对豆瓣等防盗链网站设置 Referer
         headers = {
-            "User-Agent": user_agent
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         if referer:
             headers["Referer"] = referer
@@ -603,18 +675,41 @@ class DailyReportPlugin(Star):
         try:
             async with session.get(url, headers=headers) as resp:
                 if resp.status == 200:
-                    # 获取图片二进制数据
                     content = await resp.read()
-                    # 获取 MIME 类型 (如 image/jpeg, image/webp)
                     mime_type = resp.headers.get("Content-Type", "image/jpeg")
-                    # 编码为 Base64
+
+                    # --- 图片缩放逻辑 Start ---
+                    if width > 0:
+                        try:
+                            # 1. 打开图片
+                            img = PILImage.open(io.BytesIO(content))
+
+                            # 2. 计算缩放高度 (保持比例)
+                            w_percent = (width / float(img.size[0]))
+                            h_size = int((float(img.size[1]) * float(w_percent)))
+
+                            # 3. 执行缩放 (LANCZOS 滤镜质量最高)
+                            img = img.resize((width, h_size), PILImage.Resampling.LANCZOS)
+
+                            # 4. 保存回 bytes
+                            buffer = io.BytesIO()
+                            # 转换模式以适配 JPEG (如果是 PNG 带透明通道需转 RGB)
+                            if img.mode in ("RGBA", "P"):
+                                img = img.convert("RGB")
+
+                            img.save(buffer, format="JPEG", quality=95)  # 压缩质量 85
+                            content = buffer.getvalue()
+                            mime_type = "image/jpeg"  # 缩放后统一转为 JPEG
+                        except Exception as e:
+                            logger.warning(f"Image resize failed for {url}: {e}")
+                            # 缩放失败则使用原图，不中断流程
+                    # --- 图片缩放逻辑 End ---
+
                     b64_str = base64.b64encode(content).decode("utf-8")
-                    # 拼接标准 Data URI 格式
                     return f"data:{mime_type};base64,{b64_str}"
         except Exception as e:
             logger.warning(f"Failed to download image {url}: {e}")
 
-        # 下载失败返回空或保留原 URL (这里返回空字符串，模板里会显示默认图)
         return ""
 
     # 也可以添加一个手动指令用于测试

@@ -142,6 +142,24 @@
             text-overflow: ellipsis;
             padding: 0 5px;
         }
+        /* 游戏平台标签样式 */
+        .game-platforms {
+            font-size: 10px;
+            color: #fff;
+            background-color: #764ba2; /* 紫色背景，契合游戏氛围 */
+            padding: 2px 0;
+            margin-top: -2px; /* 紧贴图片下方 */
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 调整一下标题，防止被挤压 */
+        .game-card .anime-title {
+            padding-top: 4px;
+            height: 30px; /* 稍微调小一点给平台腾位置 */
+        }
     </style>
 </head>
 <body>
@@ -293,7 +311,27 @@
                 {% endfor %}
             </table>
         </div>
+        {% if game_list %}
+        <div class="section">
+            <div class="section-title">
+                <span style="margin-right: 5px;">🎮</span> 近期发售新游
+            </div>
 
+                <div class="anime-grid">
+                    {% for game in game_list %}
+                    <div class="anime-card game-card">
+                        <div class="anime-cover-box">
+                            <img src="{{ game.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
+                            <div class="movie-date" style="background: rgba(100, 65, 165, 0.8);">{{ game.release }}</div>
+                        </div>
+                        <div class="game-platforms">{{ game.platforms }}</div>
+                        <div class="anime-title">{{ game.title }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+        </div>
+        {% endif %}
         <div class="section">
             <div class="section-title">今日放送动画</div>
             {% if not bangumi_list %}
