@@ -1,2 +1,2 @@
 aiohttp~=3.13.3
-apscheduler
+apscheduler>=3.11.0

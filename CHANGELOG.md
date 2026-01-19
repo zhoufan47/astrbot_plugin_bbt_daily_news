@@ -1,3 +1,6 @@
+## 1.4.5
+* 修改requirements.txt，调整apscheduler版本需求
+
 ## 1.4.4
 * 修改图片宽度，避免左右留白宽度不一致
 * 优化User-Agent，避免大量重复编码
