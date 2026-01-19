@@ -3,6 +3,7 @@ import datetime
 import os
 from typing import Dict, List, Any
 import re
+import traceback
 
 from aiohttp import ClientTimeout
 from bs4 import BeautifulSoup
@@ -67,7 +68,8 @@ class DailyReportPlugin(Star):
             self.scheduler.start()
             logger.info(f"棒棒糖的每日晨报：定时任务已创建{self.send_time}")
         except Exception as e:
-            logger.error(f"Failed to start scheduler: {e}")
+            logger.error(f"棒棒糖的每日晨报：定时任务创建失败: {traceback.format_exc}")
+            logger.error(f"棒棒糖的每日晨报：定时任务创建失败: {e}")
 
     # --- 数据获取模块 ---
 
