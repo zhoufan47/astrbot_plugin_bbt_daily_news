@@ -452,7 +452,7 @@ class DailyReportPlugin(Star):
     async def fetch_exchange_rates(self, session) -> Dict:
         """获取汇率 (基准 CNY)"""
         if not self.exchangerate_key:
-            return {"error": "获取失败"}
+            return {"error": "未配置Key"}
 
         url = f"https://v6.exchangerate-api.com/v6/{self.exchangerate_key}/latest/CNY"
         try:
