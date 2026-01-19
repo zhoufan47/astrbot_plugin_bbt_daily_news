@@ -19,7 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.4.1")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.4.2")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -42,9 +42,9 @@ class DailyReportPlugin(Star):
         try:
             with open(template_path, "r", encoding="utf-8") as f:
                 self.html_template = f.read()
-            logger.info(f"成功加载群聊总结模板: {template_path}")
+            logger.info(f"棒棒糖的每日晨报：成功加载模板: {template_path}")
         except FileNotFoundError:
-            logger.error(f"未找到模板文件: {template_path}")
+            logger.error(f"棒棒糖的每日晨报：未找到模板文件: {template_path}")
             # 设置一个简单的兜底模板，防止崩溃
             self.html_template = "<h1>Template Not Found</h1>"
 
@@ -64,7 +64,7 @@ class DailyReportPlugin(Star):
             )
             # 启动调度器
             self.scheduler.start()
-            logger.info(f"Daily report scheduled at {self.send_time}")
+            logger.info(f"棒棒糖的每日晨报：定时任务已创建{self.send_time}")
         except Exception as e:
             logger.error(f"Failed to start scheduler: {e}")
 
@@ -626,3 +626,10 @@ class DailyReportPlugin(Star):
         """
         html = await self.generate_html()
         yield event.image_result(html)
+
+    async def terminate(self):
+        logger.info("棒棒糖的每日晨报：开始卸载...")
+        self.scheduler.remove_all_jobs()
+        self.scheduler.shutdown(wait=False)
+        logger.info("棒棒糖的每日晨报：定时任务已清理")
+        logger.info("棒棒糖的每日晨报：完成卸载...")
