@@ -17,7 +17,7 @@ from astrbot.core.message.message_event_result import MessageChain
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-
+user_agent= "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 @register("daily_report", "棒棒糖", "每日综合简报插件", "1.4.2")
 class DailyReportPlugin(Star):
@@ -88,7 +88,7 @@ class DailyReportPlugin(Star):
         """抓取IT之家热榜"""
         url = "https://www.ithome.com/block/rank.html"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": user_agent
         }
         news_list = []
         try:
@@ -123,7 +123,7 @@ class DailyReportPlugin(Star):
         """3. 抓取DRAM价格 """
         url = "https://www.dramx.com/Price/DSD.html"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": user_agent
         }
         data = []
         try:
@@ -183,7 +183,7 @@ class DailyReportPlugin(Star):
         """ 抓取今日番剧 (基于用户提供的层级优化)"""
         url = "https://bgm.tv/calendar"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": user_agent
         }
         anime_list = []
         # Bangumi 页面使用英文简写作为 class 名
@@ -237,7 +237,7 @@ class DailyReportPlugin(Star):
         url = "https://movie.douban.com/cinema/later/beijing/"
         # 豆瓣对 Referer 检查非常严格
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": user_agent,
             "Referer": "https://movie.douban.com/",
         }
 
@@ -484,7 +484,7 @@ class DailyReportPlugin(Star):
             return []
         url = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": user_agent
         }
         # 需要为cookies 设置 age_check_done=1，否则会返回年龄检查页面
         try:
@@ -564,7 +564,7 @@ class DailyReportPlugin(Star):
             "movie_list": results[11]
         }
         logger.info(f"渲染数据: {context_data}")
-        options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 500}
+        options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 505}
         img_result = await self.html_render(self.html_template, context_data, options=options)
         return img_result
 
@@ -593,7 +593,7 @@ class DailyReportPlugin(Star):
 
         # 针对豆瓣等防盗链网站设置 Referer
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": user_agent
         }
         if referer:
             headers["Referer"] = referer
