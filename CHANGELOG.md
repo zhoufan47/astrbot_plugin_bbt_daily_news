@@ -1,3 +1,6 @@
+## 1.4.6
+* 修订模板文件，避免未配置KEY的数据源在页面上错误展示
+
 ## 1.4.5
 * 修改requirements.txt，调整apscheduler版本需求
 

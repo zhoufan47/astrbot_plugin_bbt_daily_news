@@ -150,13 +150,15 @@
             <h1>棒棒糖的每日早报</h1>
             <p>{{ date }}</p>
         </div>
+        {% if exchange_rates.error %}
+        {% else %}
         <div class="section" style="background: #fff8e1; border-color: #ffe082;">
             <div class="section-title" style="color: #f57f17;">
                 <span style="margin-right: 5px;">💰</span> 汇率速递 (1 人民币 兑换)
             </div>
-            {% if exchange_rates.error %}
+
                 <div style="color: #d32f2f; font-size: 13px;">{{ exchange_rates.error }}</div>
-            {% else %}
+
                 <div style="display: flex; justify-content: space-between; text-align: center; font-size: 14px;">
                     <div>
                         <div style="font-size: 20px;">🇺🇸</div>
@@ -189,8 +191,9 @@
                         <div style="font-size: 12px; color: #888;">英镑</div>
                     </div>
                 </div>
-            {% endif %}
+
         </div>
+        {% endif %}
         <div class="section">
             <div class="section-title">新闻速读</div>
             <ul>
@@ -202,6 +205,7 @@
 
 		<div class="section">
             <div class="row-container">
+                {% if weibo_hot %}
                 <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 4px;">
                     <div class="col-half">
                         <div class="section-title">微博热榜</div>
@@ -212,6 +216,8 @@
                         </ul>
                     </div>
                 </div>
+                {% if toutiao_hot %}
+                {% endif %}
                 <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 4px;">
                     <div class="col-half">
                         <div class="section-title">今日头条热榜</div>
@@ -222,7 +228,7 @@
                         </ul>
                     </div>
                 </div>
-
+                {% endif %}
             </div>
         </div>
 
@@ -234,11 +240,11 @@
                 {% endfor %}
             </ul>
         </div>
-		
+
         <div class="section">
             <div class="section-title">AI API 额度监控</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-
+                {% if not ai_balances.OpenRouter.error %}
                 <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
                     <div style="font-weight: bold; color: #333;">OpenRouter</div>
                     <div style="font-size: 12px; color: #666; margin-top: 5px;">
@@ -246,26 +252,31 @@
                         <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.OpenRouter.limit_remaining }}</b></span>
                     </div>
                 </div>
-
+                {% endif %}
+                {% if not ai_balances.DeepSeek.error %}
                 <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
                     <div style="font-weight: bold; color: #333;">DeepSeek</div>
                     <div style="font-size: 12px; color: #666; margin-top: 5px;">
                         <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.DeepSeek.balance }}</b></span>
                     </div>
                 </div>
+                {% endif %}
+                {% if not ai_balances.MoonShot.error %}
                 <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
                     <div style="font-weight: bold; color: #333;">MoonShot</div>
                     <div style="font-size: 12px; color: #666; margin-top: 5px;">
                         <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.MoonShot.balance }}</b></span>
                     </div>
                 </div>
+                {% endif %}
+                {% if not ai_balances.SiliconFlow.error %}
                 <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
                     <div style="font-weight: bold; color: #333;">SiliconFlow</div>
                     <div style="font-size: 12px; color: #666; margin-top: 5px;">
                         <span>剩余限额: <b style="color: #28a745;">{{ ai_balances.SiliconFlow.balance }}</b></span>
                     </div>
                 </div>
-
+                {% endif %}
             </div>
         </div>
 

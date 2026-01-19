@@ -38,7 +38,11 @@
 | **AI 额度** | 账户余额 | 硅基流动 (SiliconFlow) | `https://siliconflow.cn/` | 官方 API |
 | **娱乐/其他** | 榜单数据 (视模板而定) | 微博/头条/DMM | 对应官网 | 网页抓取 |
 
-> **注意**：网页抓取功能（如 IT之家、DRAMx、Bangumi）可能会因为目标网站改版而失效，请留意插件更新。
+> **注意**：\
+> **IT之家、DRAMx、Bangumi** 可能会因为目标网站改版而失效，请留意插件更新。\
+> **汇率** 数据来源 [ExchangeRate-API](https://www.exchangerate-api.com/)，请自行注册并获取 API 密钥。\
+> **AI 额度** 数据来源使用官方 API，请在配置页面填写 API 密钥。\
+> **微博、头条** 数据来源 [枫雨API](https://api-v2.yuafeng.cn/) 请自行注册
 
 ## 🛠️ 安装与依赖
 
