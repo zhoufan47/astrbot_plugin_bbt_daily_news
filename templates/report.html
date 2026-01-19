@@ -259,6 +259,7 @@
             </ul>
         </div>
 
+        {% if ai_balances.OpenRouter.error and ai_balances.DeepSeek.error and ai_balances.MoonShot.error and ai_balances.SiliconFlow.error %}
         <div class="section">
             <div class="section-title">AI API 额度监控</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -297,7 +298,7 @@
                 {% endif %}
             </div>
         </div>
-
+        {% endif %}
         <div class="section">
             <div class="section-title">国际 DRAM 价格</div>
             <table style="width: 100%; font-size: 13px; text-align: left;">
