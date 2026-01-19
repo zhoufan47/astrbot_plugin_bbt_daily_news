@@ -34,6 +34,7 @@ class DailyReportPlugin(Star):
         self.siliconflow_key = config.get("siliconflow_key", "")
         self.yuafeng_key = config.get("yuafeng_key", "")
         self.exchangerate_key = config.get("exchangerate_key", "")
+        self.r18_mode = config.get("r18_mode", False)
         # 本地读取模板文件
         # 获取当前文件 (main.py) 所在的目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -479,6 +480,8 @@ class DailyReportPlugin(Star):
             return {"error": "获取失败"}
 
     async def fetch_dmm_top(self, session) -> List[Dict]:
+        if not self.r18_mode:
+            return []
         url = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -542,8 +545,12 @@ class DailyReportPlugin(Star):
             "MoonShot": results[6],
             "SiliconFlow": results[7],
         }
+        show_adult = 0
+        if self.r18_mode:
+            show_adult = "1"
         # 整理常规数据
         context_data = {
+            "r18_mode":show_adult,
             "date": datetime.datetime.now().strftime("%Y-%m-%d %A"),
             "news_60s": results[0].get("news", []),
             "news_ithome": results[1],

@@ -318,6 +318,7 @@
                 </div>
             {% endif %}
         </div>
+        {% if r18_mode=='1' %}
         <div class="section">
             <div class="section-title">DMM今日TOP</div>
             {% if not dmm_top_list %}
@@ -335,6 +336,7 @@
                 </div>
             {% endif %}
         </div>
+        {% endif %}
         <div class="footer">
             Powered by <b>AstrBot</b> <br>
             Data Scraped From <b>DMM</b>, <b>番组计划</b>, <b>IT之家</b>, <b>DRAMX</b>

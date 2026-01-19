@@ -1,6 +1,6 @@
 name: astrbot_plugin_bbt_daily_news # 插件唯一识别名，以 astrbot_plugin_ 前缀开头
 display_name: 棒棒糖的每日晨报 # 用于展示的名字，可以是方便人类阅读的名字（需要版本 >= v4.5.0，低版本不会报错，请放心填写）
 desc: 一个简单的每日晨报插件 # 插件简短描述
-version: v1.4.2 # 插件版本号。格式：v1.1.1 或者 v1.1
+version: v1.4.3 # 插件版本号。格式：v1.1.1 或者 v1.1
 author: 棒棒糖 # 作者
 repo: https://github.com/zhoufan47/astrbot_plugin_bbt_daily_news
