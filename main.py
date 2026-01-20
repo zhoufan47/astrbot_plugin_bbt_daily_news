@@ -87,7 +87,7 @@ class DailyReportPlugin(Star):
                     # 返回新闻列表，通常在 data['data'] 里
                     return {"news": data.get("data", {"news:":[]}).get("news", [])}
         except Exception as e:
-            logger.error(f"Error fetching 60s news: {e}")
+            logger.error(f"棒棒糖的每日晨报：抓取60秒新闻失败: {e}")
         return {"news": ["获取失败"]}
 
     async def fetch_ithome_news(self, session) -> List[str]:
@@ -116,17 +116,17 @@ class DailyReportPlugin(Star):
                         if title:
                             news_list.append(title)
                 else:
-                    logger.warning("未找到IT之家热榜容器(ul#d-1)")
+                    logger.warning("棒棒糖的每日晨报：未找到IT之家热榜容器(ul#d-1)")
 
         except Exception as e:
-            logger.error(f"Error fetching ITHome: {e}")
+            logger.error(f"棒棒糖的每日晨报：抓取IT之家热榜失败: {e}")
             news_list.append("抓取失败")
 
-        # 返回前 15 条，避免太长
+        # 返回前 10 条，避免太长
         return news_list[:10]
 
     async def fetch_dram_price(self, session) -> List[Dict]:
-        """3. 抓取DRAM价格 """
+        """抓取DRAM价格 """
         url = "https://www.dramx.com/Price/DSD.html"
         headers = {
             "User-Agent": user_agent
@@ -143,7 +143,7 @@ class DailyReportPlugin(Star):
                 table = soup.select_one("#price1 table.price-table")
 
                 if not table:
-                    logger.warning("未找到DRAM价格表格，页面结构可能已变更")
+                    logger.warning("棒棒糖的每日晨报：未找到DRAM价格表格，页面结构可能已变更")
                     return []
 
                 # 2. 跳过表头，遍历数据行
@@ -182,7 +182,7 @@ class DailyReportPlugin(Star):
                     })
 
         except Exception as e:
-            logger.error(f"Error fetching DRAM: {e}")
+            logger.error(f"棒棒糖的每日晨报：抓取DRAM价格失败: {e}")
         return data
 
     async def fetch_bangumi_today(self, session) -> List[Dict]:
@@ -234,7 +234,7 @@ class DailyReportPlugin(Star):
                         anime_list.append(data)
 
         except Exception as e:
-            logger.error(f"Error fetching Bangumi: {e}")
+            logger.error(f"棒棒糖的每日晨报：抓取今日番剧失败: {e}")
 
         return anime_list
 
@@ -294,7 +294,7 @@ class DailyReportPlugin(Star):
                             movie_list.append(movie)
 
         except Exception as e:
-            logger.error(f"Error fetching Douban Movies: {e}")
+            logger.error(f"棒棒糖的每日晨报：抓取豆瓣近期上映电影失败: {e}")
 
         return movie_list
 
@@ -323,7 +323,7 @@ class DailyReportPlugin(Star):
                         "limit_remaining": f"${limit_remaining:.4f}" if limit_remaining else "No Limit",
                     }
         except Exception as e:
-            logger.error(f"Error fetching OpenRouter: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取OpenRouter余额失败: {e}")
         return {"error": "API请求失败"}
 
     async def fetch_deepseek_balance(self, session) -> Dict:
@@ -355,7 +355,7 @@ class DailyReportPlugin(Star):
                         "status": "正常" if data.get("is_available") else "已停用"
                     }
         except Exception as e:
-            logger.error(f"Error fetching DeepSeek: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取DeepSeek余额失败: {e}")
         return {"name": "DeepSeek", "status": "API请求失败","balance":"0.00"}
 
     async def fetch_moonshot_balance(self, session) -> Dict:
@@ -379,7 +379,7 @@ class DailyReportPlugin(Star):
                         "status": "正常" if data.get("status") else "已停用"
                     }
         except Exception as e:
-            logger.error(f"Error fetching Moonshot: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取Moonshot余额失败: {e}")
         return {"name": "Moonshot", "status": "API请求失败","balance":"¥0.00"}
 
     async def fetch_siliconflow_balance(self, session) -> Dict:
@@ -403,7 +403,7 @@ class DailyReportPlugin(Star):
                         "status": "Active"
                     }
         except Exception as e:
-            logger.error(f"Error fetching SiliconFlow: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取SiliconFlow余额失败: {e}")
         return {"name": "SiliconFlow", "status": "API请求失败","balance":"¥0.00"}
 
     async def fetch_weibo_hot(self, session) -> List[Dict]:
@@ -428,7 +428,7 @@ class DailyReportPlugin(Star):
                     return results
 
         except Exception as e:
-            logger.error(f"Error fetching 微博热榜: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取微博热榜失败: {e}")
         return []
 
     async def fetch_toutiao_hot(self, session) -> List[Dict]:
@@ -452,7 +452,7 @@ class DailyReportPlugin(Star):
                         results.append(item["title"])
                     return results
         except Exception as e:
-            logger.error(f"Error fetching 今日头条热榜: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取今日头条热榜失败: {e}")
         return []
 
     async def fetch_exchange_rates(self, session) -> Dict:
@@ -482,7 +482,7 @@ class DailyReportPlugin(Star):
                 return {"error": "获取失败"}
 
         except Exception as e:
-            logger.error(f"Error fetching Exchange Rates: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取汇率失败: {e}")
             return {"error": "获取失败"}
 
     async def fetch_dmm_top(self, session) -> List[Dict]:
@@ -516,7 +516,7 @@ class DailyReportPlugin(Star):
                         })
                 return results
         except Exception as e:
-            logger.exception(f"Error fetching DMM: {e}")
+            logger.exception(f"棒棒糖的每日晨报：获取DMM数据失败: {e}")
             return []
 
     async def fetch_rawg_games(self, session) -> List[Dict]:
@@ -582,7 +582,7 @@ class DailyReportPlugin(Star):
                         games_list.append(game)
 
         except Exception as e:
-            logger.error(f"Error fetching RAWG Games: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取RAWG游戏数据失败: {e}")
 
         return games_list
 
@@ -638,28 +638,28 @@ class DailyReportPlugin(Star):
             "movie_list": results[11],
             "game_list": results[12]
         }
-        logger.info(f"渲染数据: {context_data}")
+        logger.info(f"棒棒糖的每日晨报：渲染数据: {context_data}")
         options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 505}
         img_result = await self.html_render(self.html_template, context_data, options=options)
         return img_result
 
     async def broadcast_report(self):
         """定时任务入口"""
-        logger.info("Starting daily report generation...")
+        logger.info("棒棒糖的每日晨报：开始每日晨报定时任务...")
         try:
             html_content = await self.generate_html()
-            logger.info(f"HTML generation completed.{html_content}")
+            logger.info(f"棒棒糖的每日晨报：HTML 生成完成，路径地址: {html_content}")
             message_chain = MessageChain([Image.fromURL(html_content)])
             # 发送到配置的群
             for group_id in self.target_groups:
-                logger.info(f"向群组 {group_id} 发送图片")
+                logger.info(f"棒棒糖的每日晨报：向群组 {group_id} 发送图片")
                 await self.context.send_message(group_id,message_chain)
                 await asyncio.sleep(2)  # 防风控延迟
 
-            logger.info("Daily report broadcast finished.")
+            logger.info("棒棒糖的每日晨报：每日报告广播完成。")
 
         except Exception as e:
-            logger.error(f"Broadcast failed: {e}", exc_info=True)
+            logger.error(f"棒棒糖的每日晨报：广播失败: {e}", exc_info=True)
 
     async def _url_to_base64(self, session, url: str, referer: str = "", width: int = 0) -> str:
         """辅助方法：下载图片并转为 Base64 (支持本地缩放)"""
@@ -681,6 +681,7 @@ class DailyReportPlugin(Star):
                     # --- 图片缩放逻辑 Start ---
                     if width > 0:
                         try:
+                            # 理论上最好asyncio，不过就三四张图，懒得搞了
                             # 1. 打开图片
                             img = PILImage.open(io.BytesIO(content))
 
@@ -701,14 +702,14 @@ class DailyReportPlugin(Star):
                             content = buffer.getvalue()
                             mime_type = "image/jpeg"  # 缩放后统一转为 JPEG
                         except Exception as e:
-                            logger.warning(f"Image resize failed for {url}: {e}")
+                            logger.warning(f"I棒棒糖的每日晨报：图片缩放失败 {url}: {e}")
                             # 缩放失败则使用原图，不中断流程
                     # --- 图片缩放逻辑 End ---
 
                     b64_str = base64.b64encode(content).decode("utf-8")
                     return f"data:{mime_type};base64,{b64_str}"
         except Exception as e:
-            logger.warning(f"Failed to download image {url}: {e}")
+            logger.warning(f"棒棒糖的每日晨报：图片下载失败 {url}: {e}")
 
         return ""
 
