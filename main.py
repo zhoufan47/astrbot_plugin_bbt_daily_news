@@ -22,7 +22,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.0")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.2")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -40,6 +40,7 @@ class DailyReportPlugin(Star):
         self.r18_mode = config.get("r18_mode", False)
         self.rawg_key = config.get("rawg_key", "")
         self.game_release_date_threshold = config.get("game_release_date_threshold", 14)
+        self.report_jpeg_quality = config.get("report_jpeg_quality", 80)
         # 本地读取模板文件
         # 获取当前文件 (main.py) 所在的目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -639,7 +640,7 @@ class DailyReportPlugin(Star):
             "game_list": results[12]
         }
         logger.info(f"棒棒糖的每日晨报：渲染数据: {context_data}")
-        options = {"quality": 99, "device_scale_factor_level": "ultra", "viewport_width": 505}
+        options = {"quality": self.report_jpeg_quality, "device_scale_factor_level": "ultra", "viewport_width": 505}
         img_result = await self.html_render(self.html_template, context_data, options=options)
         return img_result
 

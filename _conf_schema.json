@@ -60,5 +60,10 @@
     "description": "R18模式",
     "type": "bool",
     "default": false
+  },
+  "report_jpeg_quality": {
+    "description": "生成的日报图片质量，不可大于100，,75以下糊的不能看。推荐90~95",
+    "type": "int",
+    "default": 80
   }
 }

@@ -50,7 +50,7 @@
 
 1.  将本插件文件夹 `astrbot_plugin_bbt_daily_report` 放入 AstrBot 的 `plugins` 目录下。
 2.  安装 Python 依赖库：
-3.   参数设置 进入AstrBot webui进行相关参数设置。
+3.  参数设置 进入AstrBot webui进行相关参数设置。
 ```bash
 pip install -r requirements.txt
 ```
