@@ -713,10 +713,8 @@ class DailyReportPlugin(Star):
         return ""
 
     # 也可以添加一个手动指令用于测试
-    @filter.command("test_report")
+    @filter.command("看看日报")
     async def manual_report(self, event: AstrMessageEvent):
-        """手动触发日报测试"""
-        yield event.plain_result("正在生成日报，请稍候...")
         # 生成HTML图片
         html = await self.generate_html()
         yield event.image_result(html)
