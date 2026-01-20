@@ -1,6 +1,6 @@
 name: astrbot_plugin_bbt_daily_news
 display_name: 棒棒糖的每日晨报
 desc: 一个简单的每日晨报插件
-version: v1.5.2
+version: v1.5.3
 author: 棒棒糖
 repo: https://github.com/zhoufan47/astrbot_plugin_bbt_daily_news
