@@ -20,7 +20,7 @@ from astrbot.core.message.message_event_result import MessageChain
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-user_agent= "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 @register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.0")
 class DailyReportPlugin(Star):
@@ -72,7 +72,7 @@ class DailyReportPlugin(Star):
             self.scheduler.start()
             logger.info(f"棒棒糖的每日晨报：定时任务已创建{self.send_time}")
         except Exception as e:
-            logger.error(f"棒棒糖的每日晨报：定时任务创建失败: {traceback.format_exc}")
+            logger.error(f"棒棒糖的每日晨报：定时任务创建失败: {traceback.format_exc()}")
             logger.error(f"棒棒糖的每日晨报：定时任务创建失败: {e}")
 
     # --- 数据获取模块 ---
@@ -411,8 +411,8 @@ class DailyReportPlugin(Star):
         if not self.yuafeng_key:
             return []
 
-        rst=[]
-        url = "http://api-v2.yuafeng.cn/API/jinri_hot.php"
+        results = []
+        url = "https://api-v2.yuafeng.cn/API/jinri_hot.php"
         params = {
             'apikey': self.yuafeng_key,
             'action': '微博热榜',
@@ -424,8 +424,8 @@ class DailyReportPlugin(Star):
                     data = await resp.json()
                     info = data.get("data", [])
                     for item in info:
-                        rst.append(item["title"])
-                    return rst
+                        results.append(item["title"])
+                    return results
 
         except Exception as e:
             logger.error(f"Error fetching 微博热榜: {e}")
@@ -436,8 +436,8 @@ class DailyReportPlugin(Star):
         if not self.yuafeng_key:
             return []
 
-        rst=[]
-        url = "http://api-v2.yuafeng.cn/API/jinri_hot.php"
+        results = []
+        url = "https://api-v2.yuafeng.cn/API/jinri_hot.php"
         params = {
             'apikey': self.yuafeng_key,
             'action': '今日头条热榜',
@@ -449,8 +449,8 @@ class DailyReportPlugin(Star):
                     data = await resp.json()
                     info = data.get("data", [])
                     for item in info:
-                        rst.append(item["title"])
-                    return rst
+                        results.append(item["title"])
+                    return results
         except Exception as e:
             logger.error(f"Error fetching 今日头条热榜: {e}")
         return []
