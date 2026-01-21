@@ -821,25 +821,12 @@ class DailyReportPlugin(Star):
                         # --- 图片缩放逻辑 Start ---
                         if width > 0:
                             try:
-                                # 理论上最好asyncio，不过就三四张图，懒得搞了
-                                # 1. 打开图片
-                                img = PILImage.open(io.BytesIO(content))
-
-                                # 2. 计算缩放高度 (保持比例)
-                                w_percent = (width / float(img.size[0]))
-                                h_size = int((float(img.size[1]) * float(w_percent)))
-
-                                # 3. 执行缩放 (LANCZOS 滤镜质量最高)
-                                img = img.resize((width, h_size), PILImage.Resampling.LANCZOS)
-
-                                # 4. 保存回 bytes
-                                buffer = io.BytesIO()
-                                # 转换模式以适配 JPEG (如果是 PNG 带透明通道需转 RGB)
-                                if img.mode in ("RGBA", "P"):
-                                    img = img.convert("RGB")
-
-                                img.save(buffer, format="JPEG", quality=95)  # 压缩质量 85
-                                content = buffer.getvalue()
+                                # 将CPU密集型的PIL操作放到线程池中执行，避免阻塞事件循环
+                                content = await asyncio.to_thread(
+                                    self._resize_image_sync, 
+                                    content, 
+                                    width
+                                )
                                 mime_type = "image/jpeg"  # 缩放后统一转为 JPEG
                             except Exception as e:
                                 logger.warning(f"棒棒糖的每日晨报：图片缩放失败 {url}: {e}")
@@ -858,6 +845,27 @@ class DailyReportPlugin(Star):
             logger.warning(f"棒棒糖的每日晨报：图片下载失败 {url}: {e}")
 
         return ""
+
+    def _resize_image_sync(self, image_bytes: bytes, width: int) -> bytes:
+        """同步的图片缩放操作，将在线程池中执行"""
+        # 1. 打开图片
+        img = PILImage.open(io.BytesIO(image_bytes))
+
+        # 2. 计算缩放高度 (保持比例)
+        w_percent = (width / float(img.size[0]))
+        h_size = int((float(img.size[1]) * float(w_percent)))
+
+        # 3. 执行缩放 (LANCZOS 滤镜质量最高)
+        img = img.resize((width, h_size), PILImage.Resampling.LANCZOS)
+
+        # 4. 保存回 bytes
+        buffer = io.BytesIO()
+        # 转换模式以适配 JPEG (如果是 PNG 带透明通道需转 RGB)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+
+        img.save(buffer, format="JPEG", quality=95)  # 压缩质量 95
+        return buffer.getvalue()
     
     # 重构API余额查询方法为通用方法
     async def _fetch_api_balance(self, session, api_name: str, api_url: str, headers: dict, parse_func) -> Dict:
