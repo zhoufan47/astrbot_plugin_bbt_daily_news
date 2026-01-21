@@ -22,6 +22,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+# API配置常量
+NEWS_API_URL = "https://60s-api.viki.moe/v2/60s"
+ITHOME_RANK_URL = "https://www.ithome.com/block/rank.html"
+DRAM_PRICE_URL = "https://www.dramx.com/Price/DSD.html"
+BANGUMI_CALENDAR_URL = "https://bgm.tv/calendar"
+DOUBAN_MOVIE_URL = "https://movie.douban.com/cinema/later/beijing/"
+DMM_RANKING_URL = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
+
 @register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.2")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
@@ -80,26 +88,24 @@ class DailyReportPlugin(Star):
 
     async def fetch_60s_news(self, session) -> Dict:
         """1. 获取60秒读懂世界"""
-        url = "https://60s-api.viki.moe/v2/60s"
         try:
-            async with session.get(url) as resp:
+            async with session.get(NEWS_API_URL) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    # 返回新闻列表，通常在 data['data'] 里
-                    return {"news": data.get("data", {"news:":[]}).get("news", [])}
+                    # 修复错误的数据访问方式：原代码中"news:"是错误的键名
+                    return {"news": data.get("data", {}).get("news", [])}
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：抓取60秒新闻失败: {e}")
         return {"news": ["获取失败"]}
 
     async def fetch_ithome_news(self, session) -> List[str]:
         """抓取IT之家热榜"""
-        url = "https://www.ithome.com/block/rank.html"
         headers = {
             "User-Agent": user_agent
         }
         news_list = []
         try:
-            async with session.get(url, headers=headers) as resp:
+            async with session.get(ITHOME_RANK_URL, headers=headers) as resp:
                 text = await resp.text()
                 soup = BeautifulSoup(text, 'lxml')
 
@@ -128,13 +134,12 @@ class DailyReportPlugin(Star):
 
     async def fetch_dram_price(self, session) -> List[Dict]:
         """抓取DRAM价格 """
-        url = "https://www.dramx.com/Price/DSD.html"
         headers = {
             "User-Agent": user_agent
         }
         data = []
         try:
-            async with session.get(url, headers=headers) as resp:
+            async with session.get(DRAM_PRICE_URL, headers=headers) as resp:
                 # 显式指定编码，防止乱码（虽然中文网页通常 utf-8，但以防万一）
                 text = await resp.text(encoding='utf-8')
                 soup = BeautifulSoup(text, 'lxml')
@@ -188,7 +193,6 @@ class DailyReportPlugin(Star):
 
     async def fetch_bangumi_today(self, session) -> List[Dict]:
         """ 抓取今日番剧 (基于用户提供的层级优化)"""
-        url = "https://bgm.tv/calendar"
         headers = {
             "User-Agent": user_agent
         }
@@ -198,7 +202,7 @@ class DailyReportPlugin(Star):
         today_key = weekday_map[datetime.datetime.today().weekday()]
 
         try:
-            async with session.get(url, headers=headers) as resp:
+            async with session.get(BANGUMI_CALENDAR_URL, headers=headers) as resp:
                 text = await resp.text()
                 soup = BeautifulSoup(text, 'lxml')
 
@@ -241,7 +245,6 @@ class DailyReportPlugin(Star):
 
     async def fetch_douban_movies(self, session) -> List[Dict]:
         """12. 获取豆瓣近期上映电影 (转 Base64 版)"""
-        url = "https://movie.douban.com/cinema/later/beijing/"
         # 豆瓣对 Referer 检查非常严格
         headers = {
             "User-Agent": user_agent,
@@ -250,7 +253,7 @@ class DailyReportPlugin(Star):
 
         movie_list = []
         try:
-            async with session.get(url, headers=headers) as resp:
+            async with session.get(DOUBAN_MOVIE_URL, headers=headers) as resp:
                 if resp.status == 200:
                     text = await resp.text()
                     soup = BeautifulSoup(text, 'lxml')
@@ -307,25 +310,18 @@ class DailyReportPlugin(Star):
         url = "https://openrouter.ai/api/v1/auth/key"
         headers = {"Authorization": f"Bearer {self.openrouter_key}"}
 
-        try:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    # data format: {'data': {'label': '...', 'usage': 1.23, 'limit': 100, 'is_free_tier': False}}
-                    info = data.get("data", {})
-                    # OpenRouter通常返回 usage (已用) 和 limit (额度)，剩余需要计算或直接显示
-                    usage = info.get("usage", 0)
-                    limit_remaining = info.get("limit_remaining", 0)
-                    usage_daily = info.get("usage_daily", 0)
-                    # 注意：OpenRouter API返回结构可能变化，建议根据实际返回调试
-                    return {
-                        "usage_daily": f"${usage_daily:.4f}",
-                        "usage": f"${usage:.4f}",
-                        "limit_remaining": f"${limit_remaining:.4f}" if limit_remaining else "No Limit",
-                    }
-        except Exception as e:
-            logger.error(f"棒棒糖的每日晨报：获取OpenRouter余额失败: {e}")
-        return {"error": "API请求失败"}
+        def parse_openrouter_data(data):
+            info = data.get("data", {})
+            usage = info.get("usage", 0)
+            limit_remaining = info.get("limit_remaining", 0)
+            usage_daily = info.get("usage_daily", 0)
+            return {
+                "usage_daily": f"${usage_daily:.4f}",
+                "usage": f"${usage:.4f}",
+                "limit_remaining": f"${limit_remaining:.4f}" if limit_remaining else "No Limit",
+            }
+
+        return await self._fetch_api_balance(session, "OpenRouter", url, headers, parse_openrouter_data)
 
     async def fetch_deepseek_balance(self, session) -> Dict:
         """ 获取 DeepSeek 余额"""
@@ -335,29 +331,23 @@ class DailyReportPlugin(Star):
         url = "https://api.deepseek.com/user/balance"
         headers = {"Authorization": f"Bearer {self.deepseek_key}"}
 
-        try:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    # DeepSeek 返回结构: {"is_available": true, "balance_infos": [{"currency": "CNY", "total_balance": "10.00"}]}
-                    infos = data.get("balance_infos", [])
-                    balance_str = "0.00"
-                    currency = "CNY"
+        def parse_deepseek_data(data):
+            infos = data.get("balance_infos", [])
+            balance_str = "0.00"
+            currency = "CNY"
 
-                    if infos:
-                        # 通常取第一个货币单位，或根据 currency == "CNY" 筛选
-                        item = infos[0]
-                        balance_str = item.get("total_balance", "0.00")
-                        currency = item.get("currency", "CNY")
+            if infos:
+                item = infos[0]
+                balance_str = item.get("total_balance", "0.00")
+                currency = item.get("currency", "CNY")
 
-                    return {
-                        "name": "DeepSeek",
-                        "balance": f"{balance_str} {currency}",
-                        "status": "正常" if data.get("is_available") else "已停用"
-                    }
-        except Exception as e:
-            logger.error(f"棒棒糖的每日晨报：获取DeepSeek余额失败: {e}")
-        return {"name": "DeepSeek", "status": "API请求失败","balance":"0.00"}
+            return {
+                "name": "DeepSeek",
+                "balance": f"{balance_str} {currency}",
+                "status": "正常" if data.get("is_available") else "已停用"
+            }
+
+        return await self._fetch_api_balance(session, "DeepSeek", url, headers, parse_deepseek_data)
 
     async def fetch_moonshot_balance(self, session) -> Dict:
         """9. 获取 Moonshot (Kimi) 余额"""
@@ -367,21 +357,16 @@ class DailyReportPlugin(Star):
         url = "https://api.moonshot.cn/v1/users/me/balance"
         headers = {"Authorization": f"Bearer {self.moonshot_key}"}
 
-        try:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    # Moonshot 返回结构: {"data": {"available_balance": 100.0, "cash_balance": 90.0, "voucher_balance": 10.0}}
-                    info = data.get("data", {})
-                    available = info.get("available_balance", 0)
-                    return {
-                        "name": "Moonshot",
-                        "balance": f"¥{available:.2f}",
-                        "status": "正常" if data.get("status") else "已停用"
-                    }
-        except Exception as e:
-            logger.error(f"棒棒糖的每日晨报：获取Moonshot余额失败: {e}")
-        return {"name": "Moonshot", "status": "API请求失败","balance":"¥0.00"}
+        def parse_moonshot_data(data):
+            info = data.get("data", {})
+            available = info.get("available_balance", 0)
+            return {
+                "name": "Moonshot",
+                "balance": f"¥{available:.2f}",
+                "status": "正常" if data.get("status") else "已停用"
+            }
+
+        return await self._fetch_api_balance(session, "Moonshot", url, headers, parse_moonshot_data)
 
     async def fetch_siliconflow_balance(self, session) -> Dict:
         """10. 获取 硅基流动 (SiliconFlow) 余额"""
@@ -391,21 +376,16 @@ class DailyReportPlugin(Star):
         url = "https://api.siliconflow.cn/v1/user/info"
         headers = {"Authorization": f"Bearer {self.siliconflow_key}"}
 
-        try:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    # SF 返回结构: {"data": {"id": "...", "name": "...", "image": "...", "balance": "14.05", ...}}
-                    info = data.get("data", {})
-                    balance = info.get("balance", "0")
-                    return {
-                        "name": "SiliconFlow",
-                        "balance": f"¥{balance}",
-                        "status": "Active"
-                    }
-        except Exception as e:
-            logger.error(f"棒棒糖的每日晨报：获取SiliconFlow余额失败: {e}")
-        return {"name": "SiliconFlow", "status": "API请求失败","balance":"¥0.00"}
+        def parse_siliconflow_data(data):
+            info = data.get("data", {})
+            balance = info.get("balance", "0")
+            return {
+                "name": "SiliconFlow",
+                "balance": f"¥{balance}",
+                "status": "Active"
+            }
+
+        return await self._fetch_api_balance(session, "SiliconFlow", url, headers, parse_siliconflow_data)
 
     async def fetch_weibo_hot(self, session) -> List[Dict]:
         """获取微博热榜"""
@@ -466,10 +446,10 @@ class DailyReportPlugin(Star):
             async with session.get(url) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    rates = data.get("conversion_rates", {})
 
                     # 只有 API 返回成功才处理
                     if data.get("result") == "success":
+                        rates = data.get("conversion_rates", {})
                         return {
                             "USD": f"{rates.get('USD', 0):.4f}",
                             "JPY": f"{rates.get('JPY', 0):.4f}",
@@ -489,13 +469,12 @@ class DailyReportPlugin(Star):
     async def fetch_dmm_top(self, session) -> List[Dict]:
         if not self.r18_mode:
             return []
-        url = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
         headers = {
             "User-Agent": user_agent
         }
         # 需要为cookies 设置 age_check_done=1，否则会返回年龄检查页面
         try:
-            async with session.get(url, headers=headers,cookies={"age_check_done": "1"}) as resp:
+            async with session.get(DMM_RANKING_URL, headers=headers, cookies={"age_check_done": "1"}) as resp:
                 # 获取网页内容文本
                 html_text = await resp.text()
                 #解析 HTML
@@ -590,7 +569,8 @@ class DailyReportPlugin(Star):
     async def generate_html(self) -> Image:
         """聚合数据并渲染HTML"""
         # 创建一个异步会话（不走代理）
-        async with aiohttp.ClientSession(trust_env=False) as session:
+        timeout = ClientTimeout(30)
+        async with aiohttp.ClientSession(trust_env=False, timeout=timeout) as session:
             # 并发执行所有抓取任务
             results = await asyncio.gather(
                 self.fetch_60s_news(session),
@@ -605,39 +585,61 @@ class DailyReportPlugin(Star):
                 self.fetch_weibo_hot(session),              # 9 微博热榜
                 self.fetch_exchange_rates(session),         # 10 汇率数据
                 self.fetch_douban_movies(session),          # 11 豆瓣电影
-                self.fetch_rawg_games(session)
+                self.fetch_rawg_games(session),
+                return_exceptions=True  # 捕获异常而不中断其他任务
             )
-        # 创建一个异步会话（走代理）
-        async with aiohttp.ClientSession(trust_env=True,timeout=ClientTimeout(30)) as sessionProxy:
-            # 并发执行所有抓取任务
-            dmm_top_list = await asyncio.gather(
-                self.fetch_dmm_top(sessionProxy),
-            )
+        
+        # 仅在启用R18模式时创建代理会话
+        dmm_top_list = []
+        if self.r18_mode:
+            async with aiohttp.ClientSession(trust_env=True, timeout=timeout) as session_proxy:
+                dmm_results = await asyncio.gather(
+                    self.fetch_dmm_top(session_proxy),
+                    return_exceptions=True
+                )
+                dmm_top_list = dmm_results[0] if not isinstance(dmm_results[0], Exception) else []
+
+        # 处理gather可能返回的异常对象
+        processed_results = []
+        for result in results:
+            if isinstance(result, Exception):
+                logger.error(f"数据获取任务失败: {result}")
+                # 根据任务索引返回默认值
+                if results.index(result) in [0, 1, 2, 3]:  # 新闻类数据
+                    processed_results.append({"news": []} if results.index(result) == 0 else [])
+                elif results.index(result) in [8, 9]:  # 热榜数据
+                    processed_results.append([])
+                elif results.index(result) == 10:  # 汇率数据
+                    processed_results.append({"error": "API请求失败"})
+                else:  # 余额数据
+                    processed_results.append({"error": "API请求失败"})
+            else:
+                processed_results.append(result)
+
         # 整理 AI 余额数据列表
         ai_balances = {
-            "OpenRouter": results[4],
-            "DeepSeek": results[5],
-            "MoonShot": results[6],
-            "SiliconFlow": results[7],
+            "OpenRouter": processed_results[4],
+            "DeepSeek": processed_results[5],
+            "MoonShot": processed_results[6],
+            "SiliconFlow": processed_results[7],
         }
-        show_adult = 0
-        if self.r18_mode:
-            show_adult = "1"
+        show_adult = "1" if self.r18_mode else "0"
+        
         # 整理常规数据
         context_data = {
-            "r18_mode":show_adult,
+            "r18_mode": show_adult,
             "date": datetime.datetime.now().strftime("%Y-%m-%d %A"),
-            "news_60s": results[0].get("news", []),
-            "news_ithome": results[1],
-            "dram_prices": results[2],
-            "bangumi_list": results[3],
+            "news_60s": processed_results[0].get("news", []) if isinstance(processed_results[0], dict) else [],
+            "news_ithome": processed_results[1],
+            "dram_prices": processed_results[2],
+            "bangumi_list": processed_results[3],
             "ai_balances": ai_balances,
-            "dmm_top_list": dmm_top_list[0],
-            "toutiao_hot": results[8],
-            "weibo_hot": results[9],
-            "exchange_rates": results[10],
-            "movie_list": results[11],
-            "game_list": results[12]
+            "dmm_top_list": dmm_top_list,
+            "toutiao_hot": processed_results[8],
+            "weibo_hot": processed_results[9],
+            "exchange_rates": processed_results[10],
+            "movie_list": processed_results[11],
+            "game_list": processed_results[12]
         }
         logger.info(f"棒棒糖的每日晨报：渲染数据: {context_data}")
         options = {"quality": self.report_jpeg_quality, "device_scale_factor_level": "ultra", "viewport_width": 505}
@@ -654,7 +656,7 @@ class DailyReportPlugin(Star):
             # 发送到配置的群
             for group_id in self.target_groups:
                 logger.info(f"棒棒糖的每日晨报：向群组 {group_id} 发送图片")
-                await self.context.send_message(group_id,message_chain)
+                await self.context.send_message(group_id, message_chain)
                 await asyncio.sleep(2)  # 防风控延迟
 
             logger.info("棒棒糖的每日晨报：每日报告广播完成。")
@@ -668,7 +670,7 @@ class DailyReportPlugin(Star):
             return ""
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": user_agent
         }
         if referer:
             headers["Referer"] = referer
@@ -703,7 +705,7 @@ class DailyReportPlugin(Star):
                             content = buffer.getvalue()
                             mime_type = "image/jpeg"  # 缩放后统一转为 JPEG
                         except Exception as e:
-                            logger.warning(f"I棒棒糖的每日晨报：图片缩放失败 {url}: {e}")
+                            logger.warning(f"棒棒糖的每日晨报：图片缩放失败 {url}: {e}")
                             # 缩放失败则使用原图，不中断流程
                     # --- 图片缩放逻辑 End ---
 
@@ -713,6 +715,24 @@ class DailyReportPlugin(Star):
             logger.warning(f"棒棒糖的每日晨报：图片下载失败 {url}: {e}")
 
         return ""
+    
+    # 重构API余额查询方法为通用方法
+    async def _fetch_api_balance(self, session, api_name: str, api_url: str, headers: dict, parse_func) -> Dict:
+        """通用API余额查询方法"""
+        if not headers.get("Authorization"):
+            return {"name": api_name, "error": "未配置Key"}
+            
+        try:
+            async with session.get(api_url, headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return parse_func(data)
+                else:
+                    logger.error(f"棒棒糖的每日晨报：{api_name} API请求失败，状态码: {resp.status}")
+                    return {"name": api_name, "status": f"API请求失败 (状态码: {resp.status})", "balance": "0.00"}
+        except Exception as e:
+            logger.error(f"棒棒糖的每日晨报：获取{api_name}余额失败: {e}")
+            return {"name": api_name, "status": "API请求失败", "balance": "0.00"}
 
     # 也可以添加一个手动指令用于测试
     @filter.command("看看日报")
@@ -733,7 +753,8 @@ class DailyReportPlugin(Star):
 
     async def terminate(self):
         logger.info("棒棒糖的每日晨报：开始卸载...")
-        self.scheduler.remove_all_jobs()
-        self.scheduler.shutdown(wait=False)
+        if self.scheduler.running:
+            self.scheduler.remove_all_jobs()
+            self.scheduler.shutdown(wait=False)
         logger.info("棒棒糖的每日晨报：定时任务已清理")
         logger.info("棒棒糖的每日晨报：完成卸载...")
