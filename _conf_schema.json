@@ -8,72 +8,85 @@
   "send_time": {
     "description": "推送时间(以服务器时区为准)",
     "type": "string",
-    "hint": "填写推送的时间，如: 08:00, 12:30, 18:00",
+    "hint": "填写推送的时间，格式为 HH:MM，如: 08:00, 12:30, 18:00",
     "default": "08:00"
   },
   "openrouter_key": {
-    "description": "openrouter_key",
+    "description": "OpenRouter API密钥",
     "type": "string",
-    "hint": "",
+    "hint": "从 https://openrouter.ai/ 获取API密钥",
     "default": ""
   },
-    "deepseek_key": {
-    "description": "deepseek_key",
+  "deepseek_key": {
+    "description": "DeepSeek API密钥",
     "type": "string",
-    "hint": "",
+    "hint": "从 https://platform.deepseek.com/ 获取API密钥",
     "default": ""
   },
-    "moonshot_key": {
-    "description": "moonshot_key",
+  "moonshot_key": {
+    "description": "Moonshot (Kimi) API密钥",
     "type": "string",
-    "hint": "",
+    "hint": "从 https://platform.moonshot.cn/ 获取API密钥",
     "default": ""
   },
-    "siliconflow_key": {
-    "description": "siliconflow_key",
+  "siliconflow_key": {
+    "description": "硅基流动 (SiliconFlow) API密钥",
     "type": "string",
-    "hint": "",
+    "hint": "从 https://siliconflow.cn/ 获取API密钥",
     "default": ""
   },
   "yuafeng_key": {
-    "description": "yuafeng_key",
+    "description": "Yuafeng API密钥",
     "type": "string",
-    "hint": "",
+    "hint": "从 https://api-v2.yuafeng.cn/ 获取API密钥，用于获取微博/今日头条热榜",
     "default": ""
   },
   "exchangerate_key":{
-    "description": "exchangerate-api 汇率查询KEY",
+    "description": "ExchangeRate-API 汇率查询KEY",
     "type": "string",
+    "hint": "从 https://www.exchangerate-api.com/ 获取API密钥",
     "default": ""
   },
   "rawg_key":{
-    "description": "rawg_key-api 查询KEY",
+    "description": "RAWG API密钥",
     "type": "string",
+    "hint": "从 https://rawg.io/apidocs 获取API密钥，用于查询游戏发售信息",
     "default": ""
   },
   "game_release_date_threshold":{
-    "description": "发售游戏查询阈值，单位（天）",
+    "description": "游戏发售日期查询阈值（天）",
     "type": "int",
+    "hint": "查询未来多少天内的即将发售游戏，默认为14天",
     "default": 14
   },
   "r18_mode":{
-    "description": "R18模式",
+    "description": "R18模式开关",
     "type": "bool",
+    "hint": "开启后将显示成人内容（DMM TOP排行榜），请注意合规性",
     "default": false
   },
   "report_jpeg_quality": {
-    "description": "生成的日报图片质量，不可大于100，,75以下糊的不能看。推荐90~95",
+    "description": "生成日报图片质量",
     "type": "int",
+    "hint": "图片质量百分比，不可大于100，75以下可能模糊，推荐90~95",
+    "min": 1,
+    "max": 100,
     "default": 80
   },
   "max_concurrent_requests": {
-    "description": "最大并发请求数，控制同时发起的网络请求数量，默认为5",
+    "description": "最大并发请求数",
     "type": "int",
+    "hint": "控制同时发起的网络请求数量，默认为5，可根据网络环境调整",
+    "min": 1,
+    "max": 20,
     "default": 5
   },
   "cache_ttl_minutes": {
-    "description": "缓存有效时间（分钟），在此时间内重复查询将使用缓存数据，默认为10分钟",
+    "description": "缓存有效时间（分钟）",
     "type": "int",
+    "hint": "在此时间内重复查询将使用缓存数据，默认为10分钟",
+    "min": 1,
+    "max": 1440,
     "default": 10
   }
 }
