@@ -786,9 +786,9 @@ class DailyReportPlugin(Star):
         """定时任务入口"""
         logger.info("棒棒糖的每日晨报：开始每日晨报定时任务...")
         try:
-            html_content = await self.generate_html()
-            logger.info(f"棒棒糖的每日晨报：HTML 生成完成，路径地址: {html_content}")
-            message_chain = MessageChain([Image.fromURL(html_content)])
+            html_url = await self.generate_html()
+            logger.info(f"棒棒糖的每日晨报：HTML 生成完成，路径地址: {html_url}")
+            message_chain = MessageChain([Image.fromURL(html_url)])
             # 发送到配置的群
             for group_id in self.target_groups:
                 logger.info(f"棒棒糖的每日晨报：向群组 {group_id} 发送图片")
@@ -903,9 +903,9 @@ class DailyReportPlugin(Star):
     async def manual_report(self, event: AstrMessageEvent):
         try:
             # 生成HTML图片
-            html = await self.generate_html()
+            html_url = await self.generate_html()
             logger.info("棒棒糖的每日晨报：手动报告生成成功")
-            yield event.image_result(html)
+            yield event.image_result(html_url)
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：手动报告生成失败: {e}", exc_info=True)
             yield event.plain_result(f"生成报告失败: {str(e)}")
@@ -937,9 +937,9 @@ class DailyReportPlugin(Star):
 
         """
         try:
-            html = await self.generate_html()
+            html_url = await self.generate_html()
             logger.info("棒棒糖的每日晨报：LLM工具报告生成成功")
-            yield event.image_result(html)
+            yield event.image_result(html_url)
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：LLM工具报告生成失败: {e}", exc_info=True)
             yield event.plain_result(f"生成报告失败: {str(e)}")
