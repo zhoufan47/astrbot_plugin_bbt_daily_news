@@ -558,7 +558,7 @@ class DailyReportPlugin(Star):
                     # 获取网页内容文本
                     html_text = await resp.text()
                     #解析 HTML
-                    soup = BeautifulSoup(html_text, 'html.parser')
+                    soup = BeautifulSoup(html_text, 'lxml')
                     results = []
 
                     # 提取数据
@@ -909,6 +909,7 @@ class DailyReportPlugin(Star):
         logger.info("棒棒糖的每日晨报：缓存已被手动清除")
         yield event.plain_result("日报缓存已清除，下次查询将获取最新数据。")
 
+    @filter.llm_tool(name="clear_daily_report_cache")
     async def tool_clear_cache(self, event: AstrMessageEvent):
         '''
         清理日报缓存
