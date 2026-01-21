@@ -65,5 +65,15 @@
     "description": "生成的日报图片质量，不可大于100，,75以下糊的不能看。推荐90~95",
     "type": "int",
     "default": 80
+  },
+  "max_concurrent_requests": {
+    "description": "最大并发请求数，控制同时发起的网络请求数量，默认为5",
+    "type": "int",
+    "default": 5
+  },
+  "cache_ttl_minutes": {
+    "description": "缓存有效时间（分钟），在此时间内重复查询将使用缓存数据，默认为10分钟",
+    "type": "int",
+    "default": 10
   }
 }

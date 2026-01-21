@@ -5,6 +5,8 @@ from typing import Dict, List, Any
 import re
 import traceback
 import io
+from dataclasses import dataclass
+from datetime import timedelta
 
 from PIL import Image as PILImage
 from aiohttp import ClientTimeout
@@ -30,6 +32,16 @@ BANGUMI_CALENDAR_URL = "https://bgm.tv/calendar"
 DOUBAN_MOVIE_URL = "https://movie.douban.com/cinema/later/beijing/"
 DMM_RANKING_URL = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
 
+@dataclass
+class CacheEntry:
+    """缓存条目"""
+    data: Any
+    timestamp: datetime.datetime
+    
+    def is_expired(self, ttl_minutes: int = 10) -> bool:
+        """检查缓存是否过期"""
+        return datetime.datetime.now() > self.timestamp + timedelta(minutes=ttl_minutes)
+
 @register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.2")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
@@ -49,6 +61,15 @@ class DailyReportPlugin(Star):
         self.rawg_key = config.get("rawg_key", "")
         self.game_release_date_threshold = config.get("game_release_date_threshold", 14)
         self.report_jpeg_quality = config.get("report_jpeg_quality", 80)
+        self.cache_ttl_minutes = config.get("cache_ttl_minutes", 10)  # 缓存有效时间，默认10分钟
+        self.max_concurrent_requests = config.get("max_concurrent_requests", 5)
+        
+        # 初始化缓存
+        self.cache = {}
+        
+        # 限制并发数
+        self.semaphore = asyncio.Semaphore(self.max_concurrent_requests)
+        
         # 本地读取模板文件
         # 获取当前文件 (main.py) 所在的目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -89,13 +110,23 @@ class DailyReportPlugin(Star):
     async def fetch_60s_news(self, session) -> Dict:
         """1. 获取60秒读懂世界"""
         try:
-            async with session.get(NEWS_API_URL) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    # 修复错误的数据访问方式：原代码中"news:"是错误的键名
-                    return {"news": data.get("data", {}).get("news", [])}
+            async with self.semaphore:  # 限制并发
+                async with session.get(NEWS_API_URL) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        # 修复错误的数据访问方式：原代码中"news:"是错误的键名
+                        return {"news": data.get("data", {}).get("news", [])}
+                    else:
+                        logger.warning(f"棒棒糖的每日晨报：获取60秒新闻API返回非200状态码: {resp.status}")
+                        return {"news": ["获取失败"]}
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取60秒新闻超时")
+            return {"news": ["获取失败 - 请求超时"]}
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取60秒新闻网络错误: {e}")
+            return {"news": ["获取失败 - 网络错误"]}
         except Exception as e:
-            logger.error(f"棒棒糖的每日晨报：抓取60秒新闻失败: {e}")
+            logger.error(f"棒棒糖的每日晨报：获取60秒新闻失败: {e}")
         return {"news": ["获取失败"]}
 
     async def fetch_ithome_news(self, session) -> List[str]:
@@ -105,29 +136,36 @@ class DailyReportPlugin(Star):
         }
         news_list = []
         try:
-            async with session.get(ITHOME_RANK_URL, headers=headers) as resp:
-                text = await resp.text()
-                soup = BeautifulSoup(text, 'lxml')
+            async with self.semaphore:  # 限制并发
+                async with session.get(ITHOME_RANK_URL, headers=headers) as resp:
+                    text = await resp.text()
+                    soup = BeautifulSoup(text, 'lxml')
 
-                # 1. 根据源码，日榜在 id="d-1" 的 ul 标签下
-                # Line 14: <ul class="bd order sel" id="d-1">
-                daily_list = soup.select_one("ul#d-1")
+                    # 1. 根据源码，日榜在 id="d-1" 的 ul 标签下
+                    # Line 14: <ul class="bd order sel" id="d-1">
+                    daily_list = soup.select_one("ul#d-1")
 
-                if daily_list:
-                    # 2. 遍历该 ul 下的所有 a 标签
-                    # Line 15: <li><a title="..." ...>标题</a></li>
-                    links = daily_list.select("li a")
+                    if daily_list:
+                        # 2. 遍历该 ul 下的所有 a 标签
+                        # Line 15: <li><a title="..." ...>标题</a></li>
+                        links = daily_list.select("li a")
 
-                    for link in links:
-                        title = link.get_text(strip=True)
-                        if title:
-                            news_list.append(title)
-                else:
-                    logger.warning("棒棒糖的每日晨报：未找到IT之家热榜容器(ul#d-1)")
+                        for link in links:
+                            title = link.get_text(strip=True)
+                            if title:
+                                news_list.append(title)
+                    else:
+                        logger.warning("棒棒糖的每日晨报：未找到IT之家热榜容器(ul#d-1)")
 
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取IT之家热榜超时")
+            news_list.append("获取失败 - 请求超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取IT之家热榜网络错误: {e}")
+            news_list.append("获取失败 - 网络错误")
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：抓取IT之家热榜失败: {e}")
-            news_list.append("抓取失败")
+            news_list.append("获取失败 - 未知错误")
 
         # 返回前 10 条，避免太长
         return news_list[:10]
@@ -139,54 +177,59 @@ class DailyReportPlugin(Star):
         }
         data = []
         try:
-            async with session.get(DRAM_PRICE_URL, headers=headers) as resp:
-                # 显式指定编码，防止乱码（虽然中文网页通常 utf-8，但以防万一）
-                text = await resp.text(encoding='utf-8')
-                soup = BeautifulSoup(text, 'lxml')
+            async with self.semaphore:  # 限制并发
+                async with session.get(DRAM_PRICE_URL, headers=headers) as resp:
+                    # 显式指定编码，防止乱码（虽然中文网页通常 utf-8，但以防万一）
+                    text = await resp.text(encoding='utf-8')
+                    soup = BeautifulSoup(text, 'lxml')
 
-                # 1. 定位 id="price1" 下的 class="price-table"
-                # 这样更精准，不会误抓到下面的 Flash 或其他表格
-                table = soup.select_one("#price1 table.price-table")
+                    # 1. 定位 id="price1" 下的 class="price-table"
+                    # 这样更精准，不会误抓到下面的 Flash 或其他表格
+                    table = soup.select_one("#price1 table.price-table")
 
-                if not table:
-                    logger.warning("棒棒糖的每日晨报：未找到DRAM价格表格，页面结构可能已变更")
-                    return []
+                    if not table:
+                        logger.warning("棒棒糖的每日晨报：未找到DRAM价格表格，页面结构可能已变更")
+                        return []
 
-                # 2. 跳过表头，遍历数据行
-                rows = table.find_all("tr")
-                # rows[0] 是表头，从 rows[1] 开始取前 6 行（包含表头通常是7行）
-                for row in rows[1:7]:
-                    cols = row.find_all("td")
-                    if len(cols) < 5:
-                        continue
+                    # 2. 跳过表头，遍历数据行
+                    rows = table.find_all("tr")
+                    # rows[0] 是表头，从 rows[1] 开始取前 6 行（包含表头通常是7行）
+                    for row in rows[1:7]:
+                        cols = row.find_all("td")
+                        if len(cols) < 5:
+                            continue
 
-                    # 3. 提取数据
-                    # 第0列: 产品名称 (DDR5...)
-                    name = cols[0].get_text(strip=True)
+                        # 3. 提取数据
+                        # 第0列: 产品名称 (DDR5...)
+                        name = cols[0].get_text(strip=True)
 
-                    # 第3列: 盘平均 (通常看平均价)
-                    price = cols[3].get_text(strip=True)
+                        # 第3列: 盘平均 (通常看平均价)
+                        price = cols[3].get_text(strip=True)
 
-                    # 第4列: 涨幅度 (包含 img 标签和文本)
-                    change_td = cols[4]
-                    change_text = change_td.get_text(strip=True)
+                        # 第4列: 涨幅度 (包含 img 标签和文本)
+                        change_td = cols[4]
+                        change_text = change_td.get_text(strip=True)
 
-                    # 4. 处理涨跌符号（为了适配 HTML 模板的变色逻辑）
-                    img = change_td.find("img")
-                    if img:
-                        src = img.get("src", "")
-                        if "up" in src:  # 图片路径包含 up
-                            change_text = f"+{change_text}"
-                        elif "down" in src:  # 图片路径包含 down
-                            change_text = f"-{change_text}"
-                        # stable (平盘) 不做处理
+                        # 4. 处理涨跌符号（为了适配 HTML 模板的变色逻辑）
+                        img = change_td.find("img")
+                        if img:
+                            src = img.get("src", "")
+                            if "up" in src:  # 图片路径包含 up
+                                change_text = f"+{change_text}"
+                            elif "down" in src:  # 图片路径包含 down
+                                change_text = f"-{change_text}"
+                            # stable (平盘) 不做处理
 
-                    data.append({
-                        "name": name,
-                        "price": price,
-                        "change": change_text
-                    })
+                        data.append({
+                            "name": name,
+                            "price": price,
+                            "change": change_text
+                        })
 
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取DRAM价格超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取DRAM价格网络错误: {e}")
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：抓取DRAM价格失败: {e}")
         return data
@@ -202,42 +245,47 @@ class DailyReportPlugin(Star):
         today_key = weekday_map[datetime.datetime.today().weekday()]
 
         try:
-            async with session.get(BANGUMI_CALENDAR_URL, headers=headers) as resp:
-                text = await resp.text()
-                soup = BeautifulSoup(text, 'lxml')
+            async with self.semaphore:  # 限制并发
+                async with session.get(BANGUMI_CALENDAR_URL, headers=headers) as resp:
+                    text = await resp.text()
+                    soup = BeautifulSoup(text, 'lxml')
 
-                # 策略：直接利用 class 名定位当天的数据，这比长 XPath 更稳定
-                # 对应你 XPath 中的 .../dl/dd 部分
-                day_section = soup.find("dd", class_=today_key)
+                    # 策略：直接利用 class 名定位当天的数据，这比长 XPath 更稳定
+                    # 对应你 XPath 中的 .../dl/dd 部分
+                    day_section = soup.find("dd", class_=today_key)
 
-                if day_section:
-                    # 对应你 XPath 中的 .../ul/li[...]
-                    items = day_section.find_all("li")
+                    if day_section:
+                        # 对应你 XPath 中的 .../ul/li[...]
+                        items = day_section.find_all("li")
 
-                    for item in items:
-                        data = {"title": "未知", "cover": ""}
+                        for item in items:
+                            data = {"title": "未知", "cover": ""}
 
-                        # --- 1. 获取标题 ---
-                        link_tag = item.find("a")
-                        if link_tag:
-                            title = link_tag.get_text(strip=True)
-                            # 如果标题为空，直接跳过
-                            if not title:
-                                continue
-                            data["title"] = title
+                            # --- 1. 获取标题 ---
+                            link_tag = item.find("a")
+                            if link_tag:
+                                title = link_tag.get_text(strip=True)
+                                # 如果标题为空，直接跳过
+                                if not title:
+                                    continue
+                                data["title"] = title
 
-                        style_attr = item.get('style', '')
-                        # --- 2. 获取图片 (双重策略) ---
-                        url_match = re.search(r"url\('?(.*?)'?\)", style_attr)
+                            style_attr = item.get('style', '')
+                            # --- 2. 获取图片 (双重策略) ---
+                            url_match = re.search(r"url\('?(.*?)'?\)", style_attr)
 
-                        img_url = "https://bgm.tv/img/no_icon_subject.png"
-                        if url_match:
-                            raw_url = url_match.group(1)
-                            img_url = "https://" + raw_url.lstrip('/')
+                            img_url = "https://bgm.tv/img/no_icon_subject.png"
+                            if url_match:
+                                raw_url = url_match.group(1)
+                                img_url = "https://" + raw_url.lstrip('/')
 
-                        data["cover"] = img_url
-                        anime_list.append(data)
+                            data["cover"] = img_url
+                            anime_list.append(data)
 
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取今日番剧超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取今日番剧网络错误: {e}")
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：抓取今日番剧失败: {e}")
 
@@ -253,50 +301,55 @@ class DailyReportPlugin(Star):
 
         movie_list = []
         try:
-            async with session.get(DOUBAN_MOVIE_URL, headers=headers) as resp:
-                if resp.status == 200:
-                    text = await resp.text()
-                    soup = BeautifulSoup(text, 'lxml')
+            async with self.semaphore:  # 限制并发
+                async with session.get(DOUBAN_MOVIE_URL, headers=headers) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        soup = BeautifulSoup(text, 'lxml')
 
-                    container = soup.find("div", id="showing-soon")
-                    if container:
-                        items = container.find_all("div", class_="item")
+                        container = soup.find("div", id="showing-soon")
+                        if container:
+                            items = container.find_all("div", class_="item")
 
-                        # 限制数量，防止 Base64 导致 HTML 体积过大
-                        for item in items[:9]:
-                            movie = {}
+                            # 限制数量，防止 Base64 导致 HTML 体积过大
+                            for item in items[:9]:
+                                movie = {}
 
-                            # 1. 标题
-                            title_tag = item.find("h3").find("a")
-                            movie["title"] = title_tag.get_text(strip=True)
+                                # 1. 标题
+                                title_tag = item.find("h3").find("a")
+                                movie["title"] = title_tag.get_text(strip=True)
 
-                            # 2. 封面处理 (关键修改)
-                            img_tag = item.find("a", class_="thumb").find("img")
-                            raw_cover_url = ""
-                            if img_tag:
-                                raw_cover_url = img_tag.get("src", "")
+                                # 2. 封面处理 (关键修改)
+                                img_tag = item.find("a", class_="thumb").find("img")
+                                raw_cover_url = ""
+                                if img_tag:
+                                    raw_cover_url = img_tag.get("src", "")
 
-                            # 下载并转 Base64
-                            if raw_cover_url:
-                                movie["cover"] = await self._url_to_base64(
-                                    session,
-                                    raw_cover_url,
-                                    referer="https://movie.douban.com/"
-                                )
-                            else:
-                                movie["cover"] = ""
+                                # 下载并转 Base64
+                                if raw_cover_url:
+                                    movie["cover"] = await self._url_to_base64(
+                                        session,
+                                        raw_cover_url,
+                                        referer="https://movie.douban.com/"
+                                    )
+                                else:
+                                    movie["cover"] = ""
 
-                            # 3. 信息列表
-                            info_ul = item.find("ul")
-                            if info_ul:
-                                lis = info_ul.find_all("li")
-                                if len(lis) >= 1:
-                                    movie["date"] = lis[0].get_text(strip=True)
-                                if len(lis) >= 2:
-                                    movie["type"] = lis[1].get_text(strip=True)
+                                # 3. 信息列表
+                                info_ul = item.find("ul")
+                                if info_ul:
+                                    lis = info_ul.find_all("li")
+                                    if len(lis) >= 1:
+                                        movie["date"] = lis[0].get_text(strip=True)
+                                    if len(lis) >= 2:
+                                        movie["type"] = lis[1].get_text(strip=True)
 
-                            movie_list.append(movie)
+                                movie_list.append(movie)
 
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取豆瓣近期上映电影超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取豆瓣近期上映电影网络错误: {e}")
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：抓取豆瓣近期上映电影失败: {e}")
 
@@ -400,14 +453,22 @@ class DailyReportPlugin(Star):
             'page': '1',
         }
         try:
-            async with session.get(url, params=params) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    info = data.get("data", [])
-                    for item in info:
-                        results.append(item["title"])
-                    return results
+            async with self.semaphore:  # 限制并发
+                async with session.get(url, params=params) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        info = data.get("data", [])
+                        for item in info:
+                            results.append(item["title"])
+                        return results
+                    else:
+                        logger.warning(f"棒棒糖的每日晨报：获取微博热榜API返回非200状态码: {resp.status}")
+                        return []
 
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取微博热榜超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取微博热榜网络错误: {e}")
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：获取微博热榜失败: {e}")
         return []
@@ -425,13 +486,21 @@ class DailyReportPlugin(Star):
             'page': '1',
         }
         try:
-            async with session.get(url, params=params) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    info = data.get("data", [])
-                    for item in info:
-                        results.append(item["title"])
-                    return results
+            async with self.semaphore:  # 限制并发
+                async with session.get(url, params=params) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        info = data.get("data", [])
+                        for item in info:
+                            results.append(item["title"])
+                        return results
+                    else:
+                        logger.warning(f"棒棒糖的每日晨报：获取今日头条热榜API返回非200状态码: {resp.status}")
+                        return []
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取今日头条热榜超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取今日头条热榜网络错误: {e}")
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：获取今日头条热榜失败: {e}")
         return []
@@ -443,25 +512,35 @@ class DailyReportPlugin(Star):
 
         url = f"https://v6.exchangerate-api.com/v6/{self.exchangerate_key}/latest/CNY"
         try:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
+            async with self.semaphore:  # 限制并发
+                async with session.get(url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
 
-                    # 只有 API 返回成功才处理
-                    if data.get("result") == "success":
-                        rates = data.get("conversion_rates", {})
-                        return {
-                            "USD": f"{rates.get('USD', 0):.4f}",
-                            "JPY": f"{rates.get('JPY', 0):.4f}",
-                            "EUR": f"{rates.get('EUR', 0):.4f}",
-                            "GBP": f"{rates.get('GBP', 0):.4f}",
-                            "TWD": f"{rates.get('TWD', 0):.4f}",
-                            "HKD": f"{rates.get('HKD', 0):.4f}"
-                        }
+                        # 只有 API 返回成功才处理
+                        if data.get("result") == "success":
+                            rates = data.get("conversion_rates", {})
+                            return {
+                                "USD": f"{rates.get('USD', 0):.4f}",
+                                "JPY": f"{rates.get('JPY', 0):.4f}",
+                                "EUR": f"{rates.get('EUR', 0):.4f}",
+                                "GBP": f"{rates.get('GBP', 0):.4f}",
+                                "TWD": f"{rates.get('TWD', 0):.4f}",
+                                "HKD": f"{rates.get('HKD', 0):.4f}"
+                            }
+                        else:
+                            logger.warning("棒棒糖的每日晨报：获取汇率API返回非success结果")
+                            return {"error": "获取失败"}
                     else:
+                        logger.warning(f"棒棒糖的每日晨报：获取汇率API返回非200状态码: {resp.status}")
                         return {"error": "获取失败"}
-                return {"error": "获取失败"}
 
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取汇率超时")
+            return {"error": "获取失败 - 请求超时"}
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取汇率网络错误: {e}")
+            return {"error": "获取失败 - 网络错误"}
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：获取汇率失败: {e}")
             return {"error": "获取失败"}
@@ -474,30 +553,35 @@ class DailyReportPlugin(Star):
         }
         # 需要为cookies 设置 age_check_done=1，否则会返回年龄检查页面
         try:
-            async with session.get(DMM_RANKING_URL, headers=headers, cookies={"age_check_done": "1"}) as resp:
-                # 获取网页内容文本
-                html_text = await resp.text()
-                #解析 HTML
-                soup = BeautifulSoup(html_text, 'html.parser')
-                results = []
+            async with self.semaphore:  # 限制并发
+                async with session.get(DMM_RANKING_URL, headers=headers, cookies={"age_check_done": "1"}) as resp:
+                    # 获取网页内容文本
+                    html_text = await resp.text()
+                    #解析 HTML
+                    soup = BeautifulSoup(html_text, 'html.parser')
+                    results = []
 
-                # 提取数据
-                # 逻辑：查找所有 id 以 "package-src-" 开头的 img 标签
-                targets = soup.find_all('img', id=re.compile(r'^package-src-'))
+                    # 提取数据
+                    # 逻辑：查找所有 id 以 "package-src-" 开头的 img 标签
+                    targets = soup.find_all('img', id=re.compile(r'^package-src-'))
 
-                for img in targets:
-                    title = img.get('alt')
-                    src = img.get('src')
+                    for img in targets:
+                        title = img.get('alt')
+                        src = img.get('src')
 
-                    if title and src:
-                        results.append({
-                            "title": title,
-                            "cover": src
-                        })
-                return results
+                        if title and src:
+                            results.append({
+                                "title": title,
+                                "cover": src
+                            })
+                    return results
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取DMM数据超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取DMM数据网络错误: {e}")
         except Exception as e:
             logger.exception(f"棒棒糖的每日晨报：获取DMM数据失败: {e}")
-            return []
+        return []
 
     async def fetch_rawg_games(self, session) -> List[Dict]:
         if not self.rawg_key:
@@ -514,84 +598,111 @@ class DailyReportPlugin(Star):
 
         games_list = []
         try:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    results = data.get("results", [])
+            async with self.semaphore:  # 限制并发
+                async with session.get(url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        results = data.get("results", [])
 
-                    for item in results:
-                        game = {}
+                        for item in results:
+                            game = {}
 
-                        # 1. 标题
-                        game["title"] = item.get("name", "Unknown")
+                            # 1. 标题
+                            game["title"] = item.get("name", "Unknown")
 
-                        # 2. 封面 (转 Base64)
-                        raw_bg = item.get("background_image", "")
-                        if raw_bg:
-                            # RAWG 图片支持裁剪参数，可以加 ?width=400 减小体积，但这里直接下原图也不大
-                            game["cover"] = await self._url_to_base64(session, raw_bg, width=512)
-                        else:
-                            game["cover"] = ""
+                            # 2. 封面 (转 Base64)
+                            raw_bg = item.get("background_image", "")
+                            if raw_bg:
+                                # RAWG 图片支持裁剪参数，可以加 ?width=400 减小体积，但这里直接下原图也不大
+                                game["cover"] = await self._url_to_base64(session, raw_bg, width=512)
+                            else:
+                                game["cover"] = ""
 
-                        # 3. 平台信息
-                        # 使用 parent_platforms 获取大类 (PC, PlayStation, Xbox, Nintendo)
-                        platforms_data = item.get("parent_platforms", [])
-                        p_names = []
-                        if platforms_data:
-                            for p_wrapper in platforms_data:
-                                p_info = p_wrapper.get("platform", {})
-                                p_name = p_info.get("name", "")
-                                if p_name == "PC":
-                                    p_names.append("PC")
-                                elif p_name == "PlayStation":
-                                    p_names.append("PlayStation")
-                                elif p_name == "Xbox":
-                                    p_names.append("Xbox")
-                                elif p_name == "Nintendo":
-                                    p_names.append("NS")
-                                elif p_name == "Apple Macintosh":
-                                    p_names.append("Mac")
-                                else:
-                                    p_names.append(p_name)
+                            # 3. 平台信息
+                            # 使用 parent_platforms 获取大类 (PC, PlayStation, Xbox, Nintendo)
+                            platforms_data = item.get("parent_platforms", [])
+                            p_names = []
+                            if platforms_data:
+                                for p_wrapper in platforms_data:
+                                    p_info = p_wrapper.get("platform", {})
+                                    p_name = p_info.get("name", "")
+                                    if p_name == "PC":
+                                        p_names.append("PC")
+                                    elif p_name == "PlayStation":
+                                        p_names.append("PlayStation")
+                                    elif p_name == "Xbox":
+                                        p_names.append("Xbox")
+                                    elif p_name == "Nintendo":
+                                        p_names.append("NS")
+                                    elif p_name == "Apple Macintosh":
+                                        p_names.append("Mac")
+                                    else:
+                                        p_names.append(p_name)
 
-                        game["platforms"] = " / ".join(p_names) if p_names else "多平台"
+                            game["platforms"] = " / ".join(p_names) if p_names else "多平台"
 
-                        # 4. 发售日期
-                        game["release"] = item.get("released", "")[5:]  # 只取 MM-DD
+                            # 4. 发售日期
+                            game["release"] = item.get("released", "")[5:]  # 只取 MM-DD
 
-                        games_list.append(game)
+                            games_list.append(game)
 
+        except asyncio.TimeoutError:
+            logger.error("棒棒糖的每日晨报：获取RAWG游戏数据超时")
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取RAWG游戏数据网络错误: {e}")
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：获取RAWG游戏数据失败: {e}")
 
         return games_list
 
     async def generate_html(self) -> Image:
-        """聚合数据并渲染HTML"""
-        # 创建一个异步会话（不走代理）
-        timeout = ClientTimeout(30)
-        async with aiohttp.ClientSession(trust_env=False, timeout=timeout) as session:
-            # 并发执行所有抓取任务
-            results = await asyncio.gather(
-                self.fetch_60s_news(session),
-                self.fetch_ithome_news(session),
-                self.fetch_dram_price(session),
-                self.fetch_bangumi_today(session),
-                self.fetch_openrouter_credits(session),       # 4 openrouter余额查询
-                self.fetch_deepseek_balance(session),         # 5 DS余额查询
-                self.fetch_moonshot_balance(session),         # 6 Moonshot余额查询
-                self.fetch_siliconflow_balance(session),      # 7 硅基流动余额查询
-                self.fetch_toutiao_hot(session),                # 8 今日头条热榜
-                self.fetch_weibo_hot(session),              # 9 微博热榜
-                self.fetch_exchange_rates(session),         # 10 汇率数据
-                self.fetch_douban_movies(session),          # 11 豆瓣电影
-                self.fetch_rawg_games(session),
-                return_exceptions=True  # 捕获异常而不中断其他任务
-            )
+        """聚合数据并渲染HTML，使用缓存机制"""
+        # 尝试从缓存获取数据
+        cache_key = "daily_report_data"
+        cached_entry = self.cache.get(cache_key)
         
-        # 仅在启用R18模式时创建代理会话
+        if cached_entry and not cached_entry.is_expired(self.cache_ttl_minutes):
+            logger.info("棒棒糖的每日晨报：使用缓存数据生成HTML")
+            results_dict = cached_entry.data
+        else:
+            logger.info("棒棒糖的每日晨报：缓存未命中或已过期，开始获取最新数据")
+            # 创建一个异步会话（不走代理）
+            timeout = ClientTimeout(total=30)  # 明确设置总超时时间
+            
+            # 定义数据获取任务
+            data_fetch_tasks = [
+                self.fetch_60s_news,
+                self.fetch_ithome_news,
+                self.fetch_dram_price,
+                self.fetch_bangumi_today,
+                self.fetch_openrouter_credits,       # 4 openrouter余额查询
+                self.fetch_deepseek_balance,         # 5 DS余额查询
+                self.fetch_moonshot_balance,         # 6 Moonshot余额查询
+                self.fetch_siliconflow_balance,      # 7 硅基流动余额查询
+                self.fetch_toutiao_hot,              # 8 今日头条热榜
+                self.fetch_weibo_hot,                # 9 微博热榜
+                self.fetch_exchange_rates,           # 10 汇率数据
+                self.fetch_douban_movies,            # 11 豆瓣电影
+                self.fetch_rawg_games,
+            ]
+            
+            async with aiohttp.ClientSession(trust_env=False, timeout=timeout) as session:
+                # 并发执行所有抓取任务
+                logger.info("棒棒糖的每日晨报：开始并发获取数据")
+                raw_results = await asyncio.gather(*[task(session) for task in data_fetch_tasks], return_exceptions=True)
+            
+            # 处理gather可能返回的异常对象
+            results_dict = self._process_results(raw_results)
+            
+            # 将结果存入缓存
+            self.cache[cache_key] = CacheEntry(data=results_dict, timestamp=datetime.datetime.now())
+            logger.info("棒棒糖的每日晨报：数据已存入缓存")
+        
+        # 仅在启用R18模式时创建代理会话获取DMM数据
         dmm_top_list = []
         if self.r18_mode:
+            # DMM数据单独处理，不放入缓存（因为它依赖于R18模式设置）
+            timeout = ClientTimeout(total=30)
             async with aiohttp.ClientSession(trust_env=True, timeout=timeout) as session_proxy:
                 dmm_results = await asyncio.gather(
                     self.fetch_dmm_top(session_proxy),
@@ -599,29 +710,12 @@ class DailyReportPlugin(Star):
                 )
                 dmm_top_list = dmm_results[0] if not isinstance(dmm_results[0], Exception) else []
 
-        # 处理gather可能返回的异常对象
-        processed_results = []
-        for result in results:
-            if isinstance(result, Exception):
-                logger.error(f"数据获取任务失败: {result}")
-                # 根据任务索引返回默认值
-                if results.index(result) in [0, 1, 2, 3]:  # 新闻类数据
-                    processed_results.append({"news": []} if results.index(result) == 0 else [])
-                elif results.index(result) in [8, 9]:  # 热榜数据
-                    processed_results.append([])
-                elif results.index(result) == 10:  # 汇率数据
-                    processed_results.append({"error": "API请求失败"})
-                else:  # 余额数据
-                    processed_results.append({"error": "API请求失败"})
-            else:
-                processed_results.append(result)
-
         # 整理 AI 余额数据列表
         ai_balances = {
-            "OpenRouter": processed_results[4],
-            "DeepSeek": processed_results[5],
-            "MoonShot": processed_results[6],
-            "SiliconFlow": processed_results[7],
+            "OpenRouter": results_dict['openrouter_credits'],
+            "DeepSeek": results_dict['deepseek_balance'],
+            "MoonShot": results_dict['moonshot_balance'],
+            "SiliconFlow": results_dict['siliconflow_balance'],
         }
         show_adult = "1" if self.r18_mode else "0"
         
@@ -629,22 +723,64 @@ class DailyReportPlugin(Star):
         context_data = {
             "r18_mode": show_adult,
             "date": datetime.datetime.now().strftime("%Y-%m-%d %A"),
-            "news_60s": processed_results[0].get("news", []) if isinstance(processed_results[0], dict) else [],
-            "news_ithome": processed_results[1],
-            "dram_prices": processed_results[2],
-            "bangumi_list": processed_results[3],
+            "news_60s": results_dict['news_60s'].get("news", []) if isinstance(results_dict['news_60s'], dict) else [],
+            "news_ithome": results_dict['ithome_news'],
+            "dram_prices": results_dict['dram_price'],
+            "bangumi_list": results_dict['bangumi_today'],
             "ai_balances": ai_balances,
             "dmm_top_list": dmm_top_list,
-            "toutiao_hot": processed_results[8],
-            "weibo_hot": processed_results[9],
-            "exchange_rates": processed_results[10],
-            "movie_list": processed_results[11],
-            "game_list": processed_results[12]
+            "toutiao_hot": results_dict['toutiao_hot'],
+            "weibo_hot": results_dict['weibo_hot'],
+            "exchange_rates": results_dict['exchange_rates'],
+            "movie_list": results_dict['douban_movies'],
+            "game_list": results_dict['rawg_games']
         }
         logger.info(f"棒棒糖的每日晨报：渲染数据: {context_data}")
         options = {"quality": self.report_jpeg_quality, "device_scale_factor_level": "ultra", "viewport_width": 505}
         img_result = await self.html_render(self.html_template, context_data, options=options)
+        logger.info("棒棒糖的每日晨报：HTML 生成完成")
         return img_result
+
+    def _process_results(self, raw_results):
+        """处理原始结果，将其转换为字典格式"""
+        # 定义结果映射
+        result_mapping = {
+            'news_60s': 0,
+            'ithome_news': 1,
+            'dram_price': 2,
+            'bangumi_today': 3,
+            'openrouter_credits': 4,
+            'deepseek_balance': 5,
+            'moonshot_balance': 6,
+            'siliconflow_balance': 7,
+            'toutiao_hot': 8,
+            'weibo_hot': 9,
+            'exchange_rates': 10,
+            'douban_movies': 11,
+            'rawg_games': 12
+        }
+        
+        results_dict = {}
+        for key, index in result_mapping.items():
+            result = raw_results[index]
+            if isinstance(result, Exception):
+                logger.error(f"数据获取任务 {key} 失败: {result}")
+                # 根据任务类型返回默认值
+                if key in ['news_60s']:
+                    results_dict[key] = {"news": ["获取失败 - 网络错误"]}
+                elif key in ['ithome_news', 'dram_price', 'bangumi_today', 'toutiao_hot', 'weibo_hot', 'douban_movies', 'rawg_games']:
+                    if key == 'dram_price':
+                        results_dict[key] = []  # dram_price 返回的是字典列表
+                    else:
+                        results_dict[key] = []
+                elif key == 'exchange_rates':
+                    results_dict[key] = {"error": "API请求失败"}
+                else:  # 余额数据
+                    results_dict[key] = {"error": "API请求失败"}
+            else:
+                results_dict[key] = result
+                
+        return results_dict
 
     async def broadcast_report(self):
         """定时任务入口"""
@@ -676,41 +812,48 @@ class DailyReportPlugin(Star):
             headers["Referer"] = referer
 
         try:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 200:
-                    content = await resp.read()
-                    mime_type = resp.headers.get("Content-Type", "image/jpeg")
+            async with self.semaphore:  # 限制并发
+                async with session.get(url, headers=headers) as resp:
+                    if resp.status == 200:
+                        content = await resp.read()
+                        mime_type = resp.headers.get("Content-Type", "image/jpeg")
 
-                    # --- 图片缩放逻辑 Start ---
-                    if width > 0:
-                        try:
-                            # 理论上最好asyncio，不过就三四张图，懒得搞了
-                            # 1. 打开图片
-                            img = PILImage.open(io.BytesIO(content))
+                        # --- 图片缩放逻辑 Start ---
+                        if width > 0:
+                            try:
+                                # 理论上最好asyncio，不过就三四张图，懒得搞了
+                                # 1. 打开图片
+                                img = PILImage.open(io.BytesIO(content))
 
-                            # 2. 计算缩放高度 (保持比例)
-                            w_percent = (width / float(img.size[0]))
-                            h_size = int((float(img.size[1]) * float(w_percent)))
+                                # 2. 计算缩放高度 (保持比例)
+                                w_percent = (width / float(img.size[0]))
+                                h_size = int((float(img.size[1]) * float(w_percent)))
 
-                            # 3. 执行缩放 (LANCZOS 滤镜质量最高)
-                            img = img.resize((width, h_size), PILImage.Resampling.LANCZOS)
+                                # 3. 执行缩放 (LANCZOS 滤镜质量最高)
+                                img = img.resize((width, h_size), PILImage.Resampling.LANCZOS)
 
-                            # 4. 保存回 bytes
-                            buffer = io.BytesIO()
-                            # 转换模式以适配 JPEG (如果是 PNG 带透明通道需转 RGB)
-                            if img.mode in ("RGBA", "P"):
-                                img = img.convert("RGB")
+                                # 4. 保存回 bytes
+                                buffer = io.BytesIO()
+                                # 转换模式以适配 JPEG (如果是 PNG 带透明通道需转 RGB)
+                                if img.mode in ("RGBA", "P"):
+                                    img = img.convert("RGB")
 
-                            img.save(buffer, format="JPEG", quality=95)  # 压缩质量 85
-                            content = buffer.getvalue()
-                            mime_type = "image/jpeg"  # 缩放后统一转为 JPEG
-                        except Exception as e:
-                            logger.warning(f"棒棒糖的每日晨报：图片缩放失败 {url}: {e}")
-                            # 缩放失败则使用原图，不中断流程
-                    # --- 图片缩放逻辑 End ---
+                                img.save(buffer, format="JPEG", quality=95)  # 压缩质量 85
+                                content = buffer.getvalue()
+                                mime_type = "image/jpeg"  # 缩放后统一转为 JPEG
+                            except Exception as e:
+                                logger.warning(f"棒棒糖的每日晨报：图片缩放失败 {url}: {e}")
+                                # 缩放失败则使用原图，不中断流程
+                        # --- 图片缩放逻辑 End ---
 
-                    b64_str = base64.b64encode(content).decode("utf-8")
-                    return f"data:{mime_type};base64,{b64_str}"
+                        b64_str = base64.b64encode(content).decode("utf-8")
+                        return f"data:{mime_type};base64,{b64_str}"
+                    else:
+                        logger.warning(f"棒棒糖的每日晨报：下载图片失败 {url}, 状态码: {resp.status}")
+        except asyncio.TimeoutError:
+            logger.warning(f"棒棒糖的每日晨报：图片下载超时 {url}")
+        except aiohttp.ClientError as e:
+            logger.warning(f"棒棒糖的每日晨报：图片下载网络错误 {url}: {e}")
         except Exception as e:
             logger.warning(f"棒棒糖的每日晨报：图片下载失败 {url}: {e}")
 
@@ -723,13 +866,26 @@ class DailyReportPlugin(Star):
             return {"name": api_name, "error": "未配置Key"}
             
         try:
-            async with session.get(api_url, headers=headers) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return parse_func(data)
-                else:
-                    logger.error(f"棒棒糖的每日晨报：{api_name} API请求失败，状态码: {resp.status}")
-                    return {"name": api_name, "status": f"API请求失败 (状态码: {resp.status})", "balance": "0.00"}
+            async with self.semaphore:  # 限制并发
+                async with session.get(api_url, headers=headers) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return parse_func(data)
+                    elif resp.status == 401:
+                        logger.warning(f"棒棒糖的每日晨报：{api_name} API认证失败，可能是API密钥无效")
+                        return {"name": api_name, "status": "API认证失败 (401)", "balance": "0.00"}
+                    elif resp.status == 429:
+                        logger.warning(f"棒棒糖的每日晨报：{api_name} API请求频率超限")
+                        return {"name": api_name, "status": "请求频率超限 (429)", "balance": "0.00"}
+                    else:
+                        logger.error(f"棒棒糖的每日晨报：{api_name} API请求失败，状态码: {resp.status}")
+                        return {"name": api_name, "status": f"API请求失败 (状态码: {resp.status})", "balance": "0.00"}
+        except asyncio.TimeoutError:
+            logger.error(f"棒棒糖的每日晨报：获取{api_name}余额超时")
+            return {"name": api_name, "status": "API请求超时", "balance": "0.00"}
+        except aiohttp.ClientError as e:
+            logger.error(f"棒棒糖的每日晨报：获取{api_name}余额网络错误: {e}")
+            return {"name": api_name, "status": "网络错误", "balance": "0.00"}
         except Exception as e:
             logger.error(f"棒棒糖的每日晨报：获取{api_name}余额失败: {e}")
             return {"name": api_name, "status": "API请求失败", "balance": "0.00"}
@@ -737,9 +893,32 @@ class DailyReportPlugin(Star):
     # 也可以添加一个手动指令用于测试
     @filter.command("看看日报")
     async def manual_report(self, event: AstrMessageEvent):
-        # 生成HTML图片
-        html = await self.generate_html()
-        yield event.image_result(html)
+        try:
+            # 生成HTML图片
+            html = await self.generate_html()
+            logger.info("棒棒糖的每日晨报：手动报告生成成功")
+            yield event.image_result(html)
+        except Exception as e:
+            logger.error(f"棒棒糖的每日晨报：手动报告生成失败: {e}", exc_info=True)
+            yield event.plain_result(f"生成报告失败: {str(e)}")
+
+    @filter.command("清除日报缓存")
+    async def clear_cache_command(self, event: AstrMessageEvent):
+        """允许用户强制清除缓存"""
+        self.cache.clear()
+        logger.info("棒棒糖的每日晨报：缓存已被手动清除")
+        yield event.plain_result("日报缓存已清除，下次查询将获取最新数据。")
+
+    async def tool_clear_cache(self, event: AstrMessageEvent):
+        '''
+        清理日报缓存
+
+
+        '''
+        self.cache.clear()
+        logger.info("棒棒糖的每日晨报：缓存已被手动清除")
+        return "日报缓存已清除，下次查询将获取最新数据。"
+
 
     @filter.llm_tool(name="today_news")
     async def report_today_news(self, event: AstrMessageEvent):
@@ -748,8 +927,13 @@ class DailyReportPlugin(Star):
 
 
         """
-        html = await self.generate_html()
-        yield event.image_result(html)
+        try:
+            html = await self.generate_html()
+            logger.info("棒棒糖的每日晨报：LLM工具报告生成成功")
+            yield event.image_result(html)
+        except Exception as e:
+            logger.error(f"棒棒糖的每日晨报：LLM工具报告生成失败: {e}", exc_info=True)
+            yield event.plain_result(f"生成报告失败: {str(e)}")
 
     async def terminate(self):
         logger.info("棒棒糖的每日晨报：开始卸载...")
