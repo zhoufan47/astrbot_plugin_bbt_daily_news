@@ -42,7 +42,7 @@ class CacheEntry:
         """检查缓存是否过期"""
         return datetime.datetime.now() > self.timestamp + timedelta(minutes=ttl_minutes)
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.2")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.4")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -570,9 +570,16 @@ class DailyReportPlugin(Star):
                         src = img.get('src')
 
                         if title and src:
+                            # --- 提取番号 ---
+                            # src 示例: https://pics.dmm.co.jp/digital/video/sone00846/sone00846pt.jpg
+                            # 抓取链接中倒数第二个目录为番号ID
+                            javid = src.split("/")[-2]
+                            bus_no = javid.replace("00", "-", 1).upper()
+
                             results.append({
                                 "title": title,
-                                "cover": src
+                                "cover": src,
+                                "id": bus_no # 新增 id 字段
                             })
                     return results
         except asyncio.TimeoutError:

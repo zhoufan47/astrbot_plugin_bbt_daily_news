@@ -381,6 +381,9 @@
                     <div class="jav-card">
                         <div class="jav-cover-box">
                             <img src="{{ dmm.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
+                            {% if dmm.id %}
+                            <div class="movie-date" style="background: rgba(240, 98, 146, 0.9);">{{ dmm.id }}</div>
+                            {% endif %}
                         </div>
                         <div class="jav-title">{{ dmm.title }}</div>
                     </div>
