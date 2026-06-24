@@ -685,7 +685,7 @@ class DailyReportPlugin(Star):
                         "rank": str(rank),
                         "title": title,
                         "performers": performers,
-                        "src": b64_cover,
+                        "cover": b64_cover,
                     })
 
                 return results
