@@ -635,7 +635,7 @@ class DailyReportPlugin(Star):
             },
         }
 
-        logger.info(f"DMM热榜：正在请求 GraphQL API, term={query_term}")
+        logger.info(f"棒棒糖的每日晨报：正在请求 GraphQL API, term={query_term}")
         try:
             async with session.post(
                 DMM_RANKING_URL,
@@ -643,14 +643,14 @@ class DailyReportPlugin(Star):
                 json=payload
             ) as resp:
                 if resp.status != 200:
-                    logger.error(f"DMM热榜：GraphQL 请求失败, status={resp.status}")
+                    logger.error(f"棒棒糖的每日晨报：GraphQL 请求失败, status={resp.status}")
                     data = await resp.json()
-                    logger.error(f"DMM热榜：错误详情: {data}")
+                    logger.error(f"棒棒糖的每日晨报：错误详情: {data}")
                     return []
 
                 data = await resp.json()
                 items = data.get("data", {}).get("ppvContentRanking", {}).get("items", [])
-                logger.info(f"DMM热榜：获取到 {len(items)} 个排名作品")
+                logger.info(f"棒棒糖的每日晨报：获取到 {len(items)} 个排名作品")
 
                 results = []
                 index = 0
