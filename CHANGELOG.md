@@ -1,3 +1,6 @@
+## 1.5.5
+* 增加模板meta参数：viewport，以适配新版本astrbot t2i service
+
 ## 1.5.4
 * 增加缓存机制
 * 增加并发限制
