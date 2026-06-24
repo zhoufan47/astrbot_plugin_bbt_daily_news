@@ -23,7 +23,7 @@ from astrbot.core.message.message_event_result import MessageChain
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-HEADERS = {
+DMM_HEADERS = {
     "accept": "application/graphql-response+json, application/graphql+json, application/json, text/event-stream, multipart/mixed",
     "accept-language": "zh-CN",
     "content-type": "application/json",
@@ -637,7 +637,7 @@ class DailyReportPlugin(Star):
         try:
             async with session.post(
                 DMM_RANKING_URL,
-                headers=HEADERS,
+                headers=DMM_HEADERS,
                 json=payload
             ) as resp:
                 if resp.status != 200:
