@@ -690,7 +690,7 @@ class DailyReportPlugin(Star):
 
                 return results
         except Exception as e:
-            logger.exception(f"DMM热榜：获取 DMM 数据失败: {e}")
+            logger.exception(f"棒棒糖的每日晨报：获取 DMM 数据失败: {e}")
             return []
 
 
