@@ -23,15 +23,88 @@ from astrbot.core.message.message_event_result import MessageChain
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+HEADERS = {
+    "accept": "application/graphql-response+json, application/graphql+json, application/json, text/event-stream, multipart/mixed",
+    "accept-language": "zh-CN",
+    "content-type": "application/json",
+    "fanza-device": "BROWSER",
+    "origin": "https://video.dmm.co.jp",
+    "referer": "https://video.dmm.co.jp/av/ranking/",
+    "sec-ch-ua": '"Microsoft Edge";v="149", "Chromium";v="149", "Not)A;Brand";v="24"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
 
+# GraphQL 查询
+RANKING_QUERY = """
+query ContentRankingPage($limit: Int!, $offset: Int!, $filter: PPVContentRankingFilterInput, $isAmateur: Boolean = false) {
+  ppvContentRanking(limit: $limit, offset: $offset, filter: $filter) {
+    items {
+      id
+      rank
+      content {
+        title
+        releaseStatus
+        packageImage {
+          mediumUrl
+          largeUrl
+          __typename
+        }
+        wishlistCount
+        isExclusiveDelivery
+        actresses @skip(if: $isAmateur) {
+          id
+          name
+          __typename
+        }
+        sampleImages {
+          number
+          largeImageUrl
+          __typename
+        }
+        hasSampleMovie
+        review {
+          average
+          total
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    ... on PPVContentTrendingRanking {
+      targetWindowEndAt
+      __typename
+    }
+    __typename
+  }
+}
+"""
 # API配置常量
 NEWS_API_URL = "https://60s-api.viki.moe/v2/60s"
 ITHOME_RANK_URL = "https://www.ithome.com/block/rank.html"
 DRAM_PRICE_URL = "https://www.dramx.com/Price/DSD.html"
 BANGUMI_CALENDAR_URL = "https://bgm.tv/calendar"
 DOUBAN_MOVIE_URL = "https://movie.douban.com/cinema/later/beijing/"
-DMM_RANKING_URL = "https://www.dmm.co.jp/digital/videoa/-/ranking/=/term=daily/"
+DMM_RANKING_URL = "https://api.video.dmm.co.jp/graphql"
+TERM_FILTER_MAP = {
+    "daily": {"daily": {"floor": "AV"}},
+    "weekly": {"weekly": {"floor": "AV"}},
+    "monthly": {"monthly": {"floor": "AV"}},
+}
+def parse_javid(content_id: str) -> str:
+    """从 content.id 提取番号，如 ofje00512 -> ofje-512"""
+    return content_id.replace("00", "-", 1)
 
+
+def get_cover_url(package_image: dict) -> str:
+    """获取封面图 URL，优先 largeUrl"""
+    if package_image and package_image.get("largeUrl"):
+        return package_image["largeUrl"]
+    if package_image and package_image.get("mediumUrl"):
+        return package_image["mediumUrl"]
+    return ""
 @dataclass
 class CacheEntry:
     """缓存条目"""
@@ -42,7 +115,7 @@ class CacheEntry:
         """检查缓存是否过期"""
         return datetime.datetime.now() > self.timestamp + timedelta(minutes=ttl_minutes)
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.2")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.6")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -546,42 +619,77 @@ class DailyReportPlugin(Star):
             return {"error": "获取失败"}
 
     async def fetch_dmm_top(self, session) -> List[Dict]:
-        if not self.r18_mode:
-            return []
-        headers = {
-            "User-Agent": user_agent
+        query_term = "daily"
+        """通过 GraphQL API 获取 DMM 排名数据"""
+        filter_val = TERM_FILTER_MAP.get(query_term, TERM_FILTER_MAP["daily"])
+        payload = {
+            "operationName": "ContentRankingPage",
+            "query": RANKING_QUERY,
+            "variables": {
+                "filter": filter_val,
+                "isAmateur": False,
+                "limit": 100,
+                "offset": 0,
+            },
         }
-        # 需要为cookies 设置 age_check_done=1，否则会返回年龄检查页面
+
+        logger.info(f"DMM热榜：正在请求 GraphQL API, term={query_term}")
         try:
-            async with self.semaphore:  # 限制并发
-                async with session.get(DMM_RANKING_URL, headers=headers, cookies={"age_check_done": "1"}) as resp:
-                    # 获取网页内容文本
-                    html_text = await resp.text()
-                    #解析 HTML
-                    soup = BeautifulSoup(html_text, 'lxml')
-                    results = []
+            async with session.post(
+                DMM_RANKING_URL,
+                headers=HEADERS,
+                json=payload
+            ) as resp:
+                if resp.status != 200:
+                    logger.error(f"DMM热榜：GraphQL 请求失败, status={resp.status}")
+                    data = await resp.json()
+                    logger.error(f"DMM热榜：错误详情: {data}")
+                    return []
 
-                    # 提取数据
-                    # 逻辑：查找所有 id 以 "package-src-" 开头的 img 标签
-                    targets = soup.find_all('img', id=re.compile(r'^package-src-'))
+                data = await resp.json()
+                items = data.get("data", {}).get("ppvContentRanking", {}).get("items", [])
+                logger.info(f"DMM热榜：获取到 {len(items)} 个排名作品")
 
-                    for img in targets:
-                        title = img.get('alt')
-                        src = img.get('src')
+                results = []
+                index = 0
+                for item in items:
+                    index = index + 1
+                    if index > 20:
+                        break
+                    rank = item.get("rank", "")
+                    content = item.get("content", {})
+                    title = content.get("title", "未找到标题")
+                    content_id = item.get("id", "")
 
-                        if title and src:
-                            results.append({
-                                "title": title,
-                                "cover": src
-                            })
-                    return results
-        except asyncio.TimeoutError:
-            logger.error("棒棒糖的每日晨报：获取DMM数据超时")
-        except aiohttp.ClientError as e:
-            logger.error(f"棒棒糖的每日晨报：获取DMM数据网络错误: {e}")
+                    # 封面图 URL
+                    cover_url = get_cover_url(content.get("packageImage"))
+
+                    # 番号
+                    jav_id = parse_javid(content_id) if content_id else ""
+
+                    # 出演者
+                    performers = []
+                    actresses = content.get("actresses", [])
+                    if actresses:
+                        for actress in actresses:
+                            performers.append(actress.get("name", ""))
+                    if not performers:
+                        performers = ["未公开/未知"]
+
+
+                    results.append({
+                        "jav_id": jav_id,
+                        "rank": str(rank),
+                        "title": title,
+                        "performers": performers,
+                        "src": cover_url,
+                    })
+
+                return results
         except Exception as e:
-            logger.exception(f"棒棒糖的每日晨报：获取DMM数据失败: {e}")
-        return []
+            logger.exception(f"DMM热榜：获取 DMM 数据失败: {e}")
+            return []
+
 
     async def fetch_rawg_games(self, session) -> List[Dict]:
         if not self.rawg_key:

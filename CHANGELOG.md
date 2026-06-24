@@ -1,3 +1,7 @@
+## 1.5.6
+* 修改DMM抓取方式
+* 增加R18模式番号展示，Thanks @NitCld
+
 ## 1.5.5
 * 增加模板meta参数：viewport，以适配新版本astrbot t2i service
 
