@@ -619,6 +619,8 @@ class DailyReportPlugin(Star):
             return {"error": "获取失败"}
 
     async def fetch_dmm_top(self, session) -> List[Dict]:
+        if not self.r18_mode:
+            return []
         query_term = "daily"
         """通过 GraphQL API 获取 DMM 排名数据"""
         filter_val = TERM_FILTER_MAP.get(query_term, TERM_FILTER_MAP["daily"])
@@ -628,7 +630,7 @@ class DailyReportPlugin(Star):
             "variables": {
                 "filter": filter_val,
                 "isAmateur": False,
-                "limit": 100,
+                "limit": 10,
                 "offset": 0,
             },
         }
@@ -675,6 +677,7 @@ class DailyReportPlugin(Star):
                             performers.append(actress.get("name", ""))
                     if not performers:
                         performers = ["未公开/未知"]
+                    b64_cover = await self._url_to_base64(session, cover_url,referer=DMM_RANKING_URL)
 
 
                     results.append({
@@ -682,7 +685,7 @@ class DailyReportPlugin(Star):
                         "rank": str(rank),
                         "title": title,
                         "performers": performers,
-                        "src": cover_url,
+                        "src": b64_cover,
                     })
 
                 return results

@@ -1,3 +1,6 @@
+## 1.5.7
+* fix bugs
+
 ## 1.5.6
 * 修改DMM抓取方式
 * 增加R18模式番号展示，Thanks @NitCld
