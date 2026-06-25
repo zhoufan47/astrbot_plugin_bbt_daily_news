@@ -1,3 +1,20 @@
+## 1.5.8
+* 新增代理开关，默认关闭
+* 你可以在代理服务中为以下域名设置路由,建议使用DOMAIN-SUFFIX模式
+* 60s-api.viki.moe
+* ithome.com
+* dramx.com
+* bgm.tv
+* douban.com
+* dmm.co.jp
+* rawg.io
+* exchangerate-api.com
+* yuafeng.cn
+* siliconflow.cn
+* moonshot.cn
+* deepseek.com
+* openrouter.ai
+
 ## 1.5.7
 * fix bugs
 

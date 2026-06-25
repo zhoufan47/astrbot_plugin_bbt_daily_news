@@ -131,6 +131,7 @@ class DailyReportPlugin(Star):
         self.yuafeng_key = config.get("yuafeng_key", "")
         self.exchangerate_key = config.get("exchangerate_key", "")
         self.r18_mode = config.get("r18_mode", False)
+        self.proxy_mode = config.get("proxy_mode", False)
         self.rawg_key = config.get("rawg_key", "")
         self.game_release_date_threshold = config.get("game_release_date_threshold", 14)
         self.report_jpeg_quality = config.get("report_jpeg_quality", 80)
@@ -797,7 +798,7 @@ class DailyReportPlugin(Star):
                 self.fetch_rawg_games,
             ]
             
-            async with aiohttp.ClientSession(trust_env=False, timeout=timeout) as session:
+            async with aiohttp.ClientSession(trust_env=self.proxy_mode, timeout=timeout) as session:
                 # 并发执行所有抓取任务
                 logger.info("棒棒糖的每日晨报：开始并发获取数据")
                 raw_results = await asyncio.gather(*[task(session) for task in data_fetch_tasks], return_exceptions=True)
