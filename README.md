@@ -44,7 +44,7 @@
 > **汇率** 数据来源 [ExchangeRate-API](https://www.exchangerate-api.com/)，请自行注册并获取 API 密钥。\
 > **AI 额度** 数据来源使用官方 API，请在配置页面填写 API 密钥。\
 > **微博、头条** 数据来源 [枫雨API](https://api-v2.yuafeng.cn/) 请自行注册 \
-> **游戏发售日** 数据来源 [RAWG](https://rawg.io/) 请自行注册
+> **游戏发售日** 数据来源 [RAWG](https://rawg.io/) 请自行注册 \
 > 目前仅支持**aiocqhttp**平台，请使用/sid获取频道ID
 
 ## 🛠️ 安装与依赖
