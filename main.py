@@ -115,7 +115,7 @@ class CacheEntry:
         """检查缓存是否过期"""
         return datetime.datetime.now() > self.timestamp + timedelta(minutes=ttl_minutes)
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.6")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.9")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
