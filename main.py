@@ -842,6 +842,8 @@ class DailyReportPlugin(Star):
         
         # 整理常规数据
         context_data = {
+            "animation_mode": "1" if self.animation_mode else "0",
+            "movie_mode": "1" if self.movie_mode else "0",
             "r18_mode": show_adult,
             "date": datetime.datetime.now().strftime("%Y-%m-%d %A"),
             "news_60s": results_dict['news_60s'].get("news", []) if isinstance(results_dict['news_60s'], dict) else [],

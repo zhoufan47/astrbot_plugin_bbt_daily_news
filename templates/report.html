@@ -336,6 +336,7 @@
 
         </div>
         {% endif %}
+        {% if animation_mode=='1' %}
         <div class="section">
             <div class="section-title">今日放送动画</div>
             {% if not bangumi_list %}
@@ -353,6 +354,8 @@
                 </div>
             {% endif %}
         </div>
+        {% endif %}
+        {% if movie_mode=='1' %}
         <div class="section">
             <div class="section-title">近期上映电影 (豆瓣)</div>
             {% if not movie_list %}
@@ -371,6 +374,7 @@
                 </div>
             {% endif %}
         </div>
+        {% endif %}
         {% if r18_mode=='1' %}
         <div class="section">
             <div class="section-title">DMM今日TOP</div>
