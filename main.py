@@ -115,7 +115,7 @@ class CacheEntry:
         """检查缓存是否过期"""
         return datetime.datetime.now() > self.timestamp + timedelta(minutes=ttl_minutes)
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.9")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.10")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -133,6 +133,9 @@ class DailyReportPlugin(Star):
         self.r18_mode = config.get("r18_mode", False)
         self.proxy_mode = config.get("proxy_mode", False)
         self.rawg_key = config.get("rawg_key", "")
+        self.movie_mode = config.get("movie_mode", False)
+        self.animation_mode = config.get("animation_mode", False)
+        self.ithome_mode = config.get("ithome_mode", False)
         self.game_release_date_threshold = config.get("game_release_date_threshold", 14)
         self.report_jpeg_quality = config.get("report_jpeg_quality", 80)
         self.cache_ttl_minutes = config.get("cache_ttl_minutes", 10)  # 缓存有效时间，默认10分钟
@@ -204,6 +207,8 @@ class DailyReportPlugin(Star):
         return {"news": ["获取失败"]}
 
     async def fetch_ithome_news(self, session) -> List[str]:
+        if not self.ithome_mode:
+            return []
         """抓取IT之家热榜"""
         headers = {
             "User-Agent": user_agent
@@ -310,6 +315,8 @@ class DailyReportPlugin(Star):
 
     async def fetch_bangumi_today(self, session) -> List[Dict]:
         """ 抓取今日番剧 (基于用户提供的层级优化)"""
+        if not self.animation_mode:
+            return []
         headers = {
             "User-Agent": user_agent
         }
@@ -367,6 +374,8 @@ class DailyReportPlugin(Star):
 
     async def fetch_douban_movies(self, session) -> List[Dict]:
         """12. 获取豆瓣近期上映电影 (转 Base64 版)"""
+        if not self.movie_mode:
+            return []
         # 豆瓣对 Referer 检查非常严格
         headers = {
             "User-Agent": user_agent,

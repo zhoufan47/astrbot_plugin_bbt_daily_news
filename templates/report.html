@@ -231,8 +231,8 @@
                         </ul>
                     </div>
                 </div>
-                {% if toutiao_hot %}
                 {% endif %}
+                {% if toutiao_hot %}
                 <div class="api-card" style="background: #f8f9fa; padding: 10px; border-radius: 4px;">
                     <div class="col-half">
                         <div class="section-title">今日头条热榜</div>
@@ -246,7 +246,7 @@
                 {% endif %}
             </div>
         </div>
-
+        {% if news_ithome %}
         <div class="section">
             <div class="section-title">IT之家热榜</div>
             <ul>
@@ -255,7 +255,7 @@
                 {% endfor %}
             </ul>
         </div>
-
+        {% endif %}
         {% if not ai_balances.OpenRouter.error
         and
         not ai_balances.DeepSeek.error

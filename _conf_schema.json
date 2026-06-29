@@ -65,6 +65,24 @@
     "hint": "开启后将显示成人内容（DMM TOP排行榜），请注意合规性",
     "default": false
   },
+  "movie_mode":{
+    "description": "是否展示电影数据",
+    "type": "bool",
+    "hint": "开启后从豆瓣获取近期上映电影",
+    "default": true
+  },
+  "animation_mode": {
+    "description": "是否展示动画数据",
+    "type": "bool",
+    "hint": "开启后从番组计划获取今日动画",
+    "default": true
+  },
+  "ithome_mode":{
+    "description": "是否展示IT Home 热榜",
+    "type": "bool",
+    "hint": "开启后从IT之家获取今日热榜",
+    "default": true
+  },
   "report_jpeg_quality": {
     "description": "生成日报图片质量",
     "type": "int",
