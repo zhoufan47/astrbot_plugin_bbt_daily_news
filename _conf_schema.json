@@ -77,6 +77,12 @@
     "hint": "开启后从番组计划获取今日动画",
     "default": true
   },
+  "dram_mode": {
+    "description": "是否展示DRAM涨跌数据",
+    "type": "bool",
+    "hint": "开启后从drammax获取dram涨跌",
+    "default": true
+  },
   "ithome_mode":{
     "description": "是否展示IT Home 热榜",
     "type": "bool",

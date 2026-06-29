@@ -115,7 +115,7 @@ class CacheEntry:
         """检查缓存是否过期"""
         return datetime.datetime.now() > self.timestamp + timedelta(minutes=ttl_minutes)
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.10")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.11")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -131,6 +131,7 @@ class DailyReportPlugin(Star):
         self.yuafeng_key = config.get("yuafeng_key", "")
         self.exchangerate_key = config.get("exchangerate_key", "")
         self.r18_mode = config.get("r18_mode", False)
+        self.dram_mode = config.get("dram_mode", False)
         self.proxy_mode = config.get("proxy_mode", False)
         self.rawg_key = config.get("rawg_key", "")
         self.movie_mode = config.get("movie_mode", False)
@@ -250,6 +251,8 @@ class DailyReportPlugin(Star):
         return news_list[:10]
 
     async def fetch_dram_price(self, session) -> List[Dict]:
+        if not self.dram_mode:
+            return []
         """抓取DRAM价格 """
         headers = {
             "User-Agent": user_agent
@@ -844,6 +847,7 @@ class DailyReportPlugin(Star):
         context_data = {
             "animation_mode": "1" if self.animation_mode else "0",
             "movie_mode": "1" if self.movie_mode else "0",
+            "dram_mode": "1" if self.dram_mode else "0",
             "r18_mode": show_adult,
             "date": datetime.datetime.now().strftime("%Y-%m-%d %A"),
             "news_60s": results_dict['news_60s'].get("news", []) if isinstance(results_dict['news_60s'], dict) else [],
