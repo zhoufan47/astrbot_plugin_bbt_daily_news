@@ -8,7 +8,7 @@ from PIL import Image as PILImage
 
 from astrbot.api import logger
 
-from constants import USER_AGENT
+from .constants import USER_AGENT
 
 
 def parse_javid(content_id: str) -> str:
