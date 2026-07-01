@@ -7,8 +7,8 @@ import aiohttp
 
 from astrbot.api import logger
 
-from constants import FUEL_PRICE_URL
-from config import PluginConfig
+from ..constants import FUEL_PRICE_URL
+from ..config import PluginConfig
 
 
 async def fetch_fuel_price(session, semaphore: asyncio.Semaphore, config: PluginConfig) -> Dict:

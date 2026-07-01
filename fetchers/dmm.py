@@ -5,9 +5,9 @@ from typing import Dict, List
 
 from astrbot.api import logger
 
-from constants import DMM_HEADERS, DMM_RANKING_URL, RANKING_QUERY, TERM_FILTER_MAP
-from config import PluginConfig
-from utils import get_cover_url, parse_javid, url_to_base64
+from ..constants import DMM_HEADERS, DMM_RANKING_URL, RANKING_QUERY, TERM_FILTER_MAP
+from ..config import PluginConfig
+from ..utils import get_cover_url, parse_javid, url_to_base64
 
 
 async def fetch_dmm_top(session, semaphore: asyncio.Semaphore, config: PluginConfig) -> List[Dict]:

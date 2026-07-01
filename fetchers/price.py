@@ -8,8 +8,8 @@ from bs4 import BeautifulSoup
 
 from astrbot.api import logger
 
-from constants import USER_AGENT, DRAM_PRICE_URL
-from config import PluginConfig
+from ..constants import USER_AGENT, DRAM_PRICE_URL
+from ..config import PluginConfig
 
 
 async def fetch_dram_price(session, semaphore: asyncio.Semaphore, config: PluginConfig) -> List[Dict]:

@@ -8,7 +8,7 @@ from aiohttp import ClientTimeout
 
 from astrbot.api import logger
 
-from config import PluginConfig
+from ..config import PluginConfig
 from .news import fetch_60s_news, fetch_ithome_news, fetch_weibo_hot, fetch_toutiao_hot
 from .media import fetch_bangumi_today, fetch_douban_movies, fetch_rawg_games
 from .balance import (

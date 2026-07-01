@@ -10,9 +10,9 @@ from bs4 import BeautifulSoup
 
 from astrbot.api import logger
 
-from constants import USER_AGENT, BANGUMI_CALENDAR_URL, DOUBAN_MOVIE_URL
-from config import PluginConfig
-from utils import url_to_base64
+from ..constants import USER_AGENT, BANGUMI_CALENDAR_URL, DOUBAN_MOVIE_URL
+from ..config import PluginConfig
+from ..utils import url_to_base64
 
 
 async def fetch_bangumi_today(session, semaphore: asyncio.Semaphore, config: PluginConfig) -> List[Dict]:

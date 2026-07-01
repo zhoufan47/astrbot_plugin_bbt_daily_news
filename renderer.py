@@ -6,10 +6,10 @@ from typing import Callable, Dict, List
 
 from astrbot.api import logger
 
-from cache import CacheEntry
-from config import PluginConfig
-from constants import TEMPLATE_FILES
-from fetchers import DataFetcherManager
+from .cache import CacheEntry
+from .config import PluginConfig
+from .constants import TEMPLATE_FILES
+from .fetchers import DataFetcherManager
 
 
 class ReportRenderer:

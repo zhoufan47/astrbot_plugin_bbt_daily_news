@@ -7,8 +7,8 @@ import aiohttp
 
 from astrbot.api import logger
 
-from constants import GOLD_PRICE_URL
-from config import PluginConfig
+from ..constants import GOLD_PRICE_URL
+from ..config import PluginConfig
 
 
 async def fetch_gold_price(session, semaphore: asyncio.Semaphore, config: PluginConfig) -> Dict:

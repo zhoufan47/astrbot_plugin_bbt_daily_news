@@ -11,9 +11,9 @@ from astrbot.core.message.message_event_result import MessageChain
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from config import PluginConfig
-from fetchers import DataFetcherManager
-from renderer import ReportRenderer
+from .config import PluginConfig
+from .fetchers import DataFetcherManager
+from .renderer import ReportRenderer
 
 
 @register("daily_report", "棒棒糖", "每日综合简报插件", "1.5.11")

@@ -8,8 +8,8 @@ from bs4 import BeautifulSoup
 
 from astrbot.api import logger
 
-from constants import USER_AGENT, NEWS_API_URL, ITHOME_RANK_URL
-from config import PluginConfig
+from ..constants import USER_AGENT, NEWS_API_URL, ITHOME_RANK_URL
+from ..config import PluginConfig
 
 
 async def fetch_60s_news(session, semaphore: asyncio.Semaphore) -> Dict:

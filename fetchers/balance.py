@@ -7,7 +7,7 @@ import aiohttp
 
 from astrbot.api import logger
 
-from config import PluginConfig
+from ..config import PluginConfig
 
 
 async def fetch_api_balance(
