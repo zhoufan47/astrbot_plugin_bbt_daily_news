@@ -59,7 +59,7 @@ async def fetch_bangumi_today(session, semaphore: asyncio.Semaphore, config: Plu
                             raw_url = url_match.group(1)
                             img_url = "https://" + raw_url.lstrip('/')
 
-                        data["cover"] = img_url
+                        data["cover"] = await url_to_base64(session,semaphore,img_url,referer=BANGUMI_CALENDAR_URL)
                         anime_list.append(data)
 
     except asyncio.TimeoutError:
