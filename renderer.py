@@ -84,6 +84,8 @@ class ReportRenderer:
             "movie_mode": "1" if self.config.movie_mode else "0",
             "dram_mode": "1" if self.config.dram_mode else "0",
             "r18_mode": show_adult,
+            "fuel_mode": "1" if self.config.fuel_mode else "0",
+            "gold_mode": "1" if self.config.gold_mode else "0",
             "date": datetime.datetime.now().strftime("%Y-%m-%d %A"),
             "news_60s": results_dict["news_60s"].get("news", []) if isinstance(results_dict["news_60s"], dict) else [],
             "news_ithome": results_dict["ithome_news"],
@@ -96,6 +98,8 @@ class ReportRenderer:
             "exchange_rates": results_dict["exchange_rates"],
             "movie_list": results_dict["douban_movies"],
             "game_list": results_dict["rawg_games"],
+            "fuel_price": results_dict["fuel_price"],
+            "gold_price": results_dict["gold_price"],
         }
         logger.info(f"棒棒糖的每日晨报：渲染数据: {context_data}")
 

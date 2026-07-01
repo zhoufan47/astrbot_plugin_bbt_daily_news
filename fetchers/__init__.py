@@ -19,6 +19,8 @@ from .balance import (
 )
 from .dmm import fetch_dmm_top
 from .price import fetch_dram_price, fetch_exchange_rates
+from .fuel import fetch_fuel_price
+from .gold import fetch_gold_price
 
 
 class DataFetcherManager:
@@ -52,6 +54,8 @@ class DataFetcherManager:
             ("exchange_rates", lambda s: fetch_exchange_rates(s, self.semaphore, self.config)),
             ("douban_movies", lambda s: fetch_douban_movies(s, self.semaphore, self.config)),
             ("rawg_games", lambda s: fetch_rawg_games(s, self.semaphore, self.config)),
+            ("fuel_price", lambda s: fetch_fuel_price(s, self.semaphore, self.config)),
+            ("gold_price", lambda s: fetch_gold_price(s, self.semaphore, self.config)),
         ]
 
         logger.info("棒棒糖的每日晨报：开始并发获取数据")
@@ -98,7 +102,7 @@ class DataFetcherManager:
                     "rawg_games",
                 ]:
                     results_dict[key] = []
-                elif key == "exchange_rates":
+                elif key in ["exchange_rates", "fuel_price", "gold_price"]:
                     results_dict[key] = {"error": "API请求失败"}
                 else:  # 余额数据
                     results_dict[key] = {"error": "API请求失败"}

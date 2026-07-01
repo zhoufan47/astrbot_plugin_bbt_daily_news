@@ -70,6 +70,8 @@ DRAM_PRICE_URL = "https://www.dramx.com/Price/DSD.html"
 BANGUMI_CALENDAR_URL = "https://bgm.tv/calendar"
 DOUBAN_MOVIE_URL = "https://movie.douban.com/cinema/later/beijing/"
 DMM_RANKING_URL = "https://api.video.dmm.co.jp/graphql"
+FUEL_PRICE_URL = "https://60s.viki.moe/v2/fuel-price"
+GOLD_PRICE_URL = "https://60s.viki.moe/v2/gold-price"
 
 # DMM 排名术语过滤映射
 TERM_FILTER_MAP = {

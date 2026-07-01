@@ -22,6 +22,9 @@ class PluginConfig:
     movie_mode: bool
     animation_mode: bool
     ithome_mode: bool
+    fuel_mode: bool
+    fuel_province: str
+    gold_mode: bool
     game_release_date_threshold: int
     report_jpeg_quality: int
     cache_ttl_minutes: int
@@ -46,6 +49,9 @@ class PluginConfig:
             movie_mode=config.get("movie_mode", False),
             animation_mode=config.get("animation_mode", False),
             ithome_mode=config.get("ithome_mode", False),
+            fuel_mode=config.get("fuel_mode", True),
+            fuel_province=config.get("fuel_province", "北京"),
+            gold_mode=config.get("gold_mode", True),
             game_release_date_threshold=config.get("game_release_date_threshold", 14),
             report_jpeg_quality=config.get("report_jpeg_quality", 80),
             cache_ttl_minutes=config.get("cache_ttl_minutes", 10),
