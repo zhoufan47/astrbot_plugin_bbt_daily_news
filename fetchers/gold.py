@@ -21,11 +21,33 @@ async def fetch_gold_price(session, semaphore: asyncio.Semaphore, config: Plugin
             async with session.get(GOLD_PRICE_URL) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    return {
-                        "international": data.get("国际金价", "获取失败"),
-                        "domestic": data.get("国内金价", "获取失败"),
-                        "update_time": data.get("update_time", "获取失败"),
-                    }
+                    # 实际返回结构: {"code": 200, "data": {"date": "...", "metals": [{"name": "今日金价", "today_price": "870.68", "unit": "元/克", ...}]}}
+                    if data.get("code") == 200 and "data" in data:
+                        gold_data = data["data"]
+                        metals = gold_data.get("metals", [])
+                        
+                        result = {
+                            "international": "获取失败",
+                            "domestic": "获取失败",
+                            "update_time": gold_data.get("date", "获取失败"),
+                        }
+                        
+                        # 遍历 metals 提取金价信息
+                        for metal in metals:
+                            name = metal.get("name", "")
+                            price = metal.get("today_price", "获取失败")
+                            unit = metal.get("unit", "")
+                            
+                            # 根据名称区分国际和国内金价
+                            if "伦敦金" in name or "纽约黄金" in name or "国际" in name:
+                                result["international"] = f"{price} {unit}"
+                            elif "今日金价" in name or "黄金价格" in name:
+                                result["domestic"] = f"{price} {unit}"
+                        
+                        return result
+                    else:
+                        logger.warning(f"棒棒糖的每日晨报：金价API返回数据格式异常: {data}")
+                        return {"error": "获取失败"}
                 else:
                     logger.warning(f"棒棒糖的每日晨报：获取金价API返回非200状态码: {resp.status}")
                     return {"error": "获取失败"}
