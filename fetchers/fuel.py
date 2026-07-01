@@ -17,7 +17,7 @@ async def fetch_fuel_price(session, semaphore: asyncio.Semaphore, config: Plugin
         return {"error": "未开启", "province": config.fuel_province}
 
     province = config.fuel_province
-    params = {"province": province}
+    params = {"region": province}
     try:
         async with semaphore:
             async with session.get(FUEL_PRICE_URL, params=params) as resp:
