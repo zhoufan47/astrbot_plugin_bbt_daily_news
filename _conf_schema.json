@@ -89,6 +89,24 @@
     "hint": "开启后从IT之家获取今日热榜",
     "default": true
   },
+  "fuel_province":{
+    "description": "油价查询省份",
+    "type": "string",
+    "hint": "填写查询油价的省份名称，如: 北京、上海、广东、浙江等",
+    "default": "北京"
+  },
+  "fuel_mode":{
+    "description": "是否展示油价数据",
+    "type": "bool",
+    "hint": "开启后从60s API获取指定省份成品油价格",
+    "default": true
+  },
+  "gold_mode":{
+    "description": "是否展示金价数据",
+    "type": "bool",
+    "hint": "开启后从60s API获取国际与国内实时黄金价格",
+    "default": true
+  },
   "report_jpeg_quality": {
     "description": "生成日报图片质量",
     "type": "int",

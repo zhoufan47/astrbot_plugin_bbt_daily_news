@@ -209,6 +209,55 @@
             </div>
         </div>
         {% endif %}
+        {% if fuel_mode=='1' and not fuel_price.error %}
+        <div class="section" style="background: #e8f5e9; border-color: #a5d6a7;">
+            <div class="section-title" style="color: #2e7d32;">
+                <span style="margin-right: 5px;">⛽</span> {{ fuel_price.province }} 油价（元/升）
+            </div>
+            <div style="display: flex; justify-content: space-between; text-align: center; font-size: 14px;">
+                <div>
+                    <div style="font-size: 20px;">9️⃣2️⃣</div>
+                    <div style="font-weight: bold; color: #333;">{{ fuel_price.gas_92 }}</div>
+                    <div style="font-size: 12px; color: #888;">92号汽油</div>
+                </div>
+                <div>
+                    <div style="font-size: 20px;">9️⃣5️⃣</div>
+                    <div style="font-weight: bold; color: #333;">{{ fuel_price.gas_95 }}</div>
+                    <div style="font-size: 12px; color: #888;">95号汽油</div>
+                </div>
+                <div>
+                    <div style="font-size: 20px;">9️⃣8️⃣</div>
+                    <div style="font-weight: bold; color: #333;">{{ fuel_price.gas_98 }}</div>
+                    <div style="font-size: 12px; color: #888;">98号汽油</div>
+                </div>
+                <div>
+                    <div style="font-size: 20px;">🛢️</div>
+                    <div style="font-weight: bold; color: #333;">{{ fuel_price.diesel_0 }}</div>
+                    <div style="font-size: 12px; color: #888;">0号柴油</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if gold_mode=='1' and not gold_price.error %}
+        <div class="section" style="background: #fffde7; border-color: #fff9c4;">
+            <div class="section-title" style="color: #f9a825;">
+                <span style="margin-right: 5px;">🥇</span> 黄金价格
+            </div>
+            <div style="display: flex; justify-content: space-around; text-align: center; font-size: 14px;">
+                <div>
+                    <div style="font-size: 20px;">🌍</div>
+                    <div style="font-weight: bold; color: #333;">{{ gold_price.international }} 美元/盎司</div>
+                    <div style="font-size: 12px; color: #888;">国际金价</div>
+                </div>
+                <div>
+                    <div style="font-size: 20px;">🇨🇳</div>
+                    <div style="font-weight: bold; color: #333;">{{ gold_price.domestic }} 元/克</div>
+                    <div style="font-size: 12px; color: #888;">国内金价</div>
+                </div>
+            </div>
+            <div style="text-align: center; font-size: 11px; color: #aaa; margin-top: 6px;">更新时间：{{ gold_price.update_time }}</div>
+        </div>
+        {% endif %}
         <div class="section">
             <div class="section-title">60秒速读世界</div>
             <ul>
@@ -302,6 +351,7 @@
             </div>
         </div>
         {% endif %}
+        {% if dram_mode=='1' %}
         <div class="section">
             <div class="section-title">国际 DRAM 价格</div>
             <table style="width: 100%; font-size: 13px; text-align: left;">
@@ -315,12 +365,12 @@
                 {% endfor %}
             </table>
         </div>
+        {% endif %}
         {% if game_list %}
         <div class="section">
             <div class="section-title">
                 <span style="margin-right: 5px;">🎮</span> 近期发售新游
             </div>
-
                 <div class="anime-grid">
                     {% for game in game_list %}
                     <div class="anime-card game-card">
@@ -336,72 +386,11 @@
 
         </div>
         {% endif %}
-        {% if animation_mode=='1' %}
-        <div class="section">
-            <div class="section-title">今日放送动画</div>
-            {% if not bangumi_list %}
-                <p style="color:#999; font-size:12px;">今日无更新或获取失败</p>
-            {% else %}
-                <div class="anime-grid">
-                    {% for anime in bangumi_list %}
-                    <div class="anime-card">
-                        <div class="anime-cover-box">
-                            <img src="{{ anime.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
-                        </div>
-                        <div class="anime-title">{{ anime.title }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% if movie_mode=='1' %}
-        <div class="section">
-            <div class="section-title">近期上映电影 (豆瓣)</div>
-            {% if not movie_list %}
-                <p style="color:#999; font-size:12px;">获取失败或近期无新片</p>
-            {% else %}
-                <div class="anime-grid"> {% for movie in movie_list %}
-                    <div class="anime-card">
-                        <div class="anime-cover-box">
-                            <img src="{{ movie.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
-                            <div class="movie-date">{{ movie.date }}</div>
-                        </div>
-                        <div class="anime-title">{{ movie.title }}</div>
-                        <div class="movie-type">{{ movie.type }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% if r18_mode=='1' %}
-        <div class="section">
-            <div class="section-title">DMM今日TOP</div>
-            {% if not dmm_top_list %}
-                <p style="color:#999; font-size:12px;">获取失败</p>
-            {% else %}
-                <div class="jav-grid">
-                    {% for dmm in dmm_top_list[:9] %}
-                    <div class="jav-card">
-                        <div class="jav-cover-box">
-                            <img src="{{ dmm.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
-                            {% if dmm.jav_id %}
-                            <div class="movie-date" style="background: rgba(240, 98, 146, 0.9);">{{ dmm.jav_id }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="jav-title">{{ dmm.title }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
         <div class="footer">
             Developed by <b>棒棒糖</b> <br>
             Powered by <b>AstrBot</b> <br>
             Data Scraped From <b>DMM</b>  <b>番组计划</b>  <b>IT之家</b>  <b>DRAMX</b>  <b>豆瓣</b>
-            <b>微博</b>  <b>今日头条</b>  <b>ExchangeRate</b>  <b>RAWG</b>
+            <b>微博</b>  <b>今日头条</b>  <b>ExchangeRate</b>  <b>RAWG</b>  <b>60s API</b>
         </div>
     </div>
 </body>
