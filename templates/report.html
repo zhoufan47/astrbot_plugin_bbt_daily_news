@@ -336,67 +336,6 @@
 
         </div>
         {% endif %}
-        {% if animation_mode=='1' %}
-        <div class="section">
-            <div class="section-title">今日放送动画</div>
-            {% if not bangumi_list %}
-                <p style="color:#999; font-size:12px;">今日无更新或获取失败</p>
-            {% else %}
-                <div class="anime-grid">
-                    {% for anime in bangumi_list %}
-                    <div class="anime-card">
-                        <div class="anime-cover-box">
-                            <img src="{{ anime.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
-                        </div>
-                        <div class="anime-title">{{ anime.title }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% if movie_mode=='1' %}
-        <div class="section">
-            <div class="section-title">近期上映电影 (豆瓣)</div>
-            {% if not movie_list %}
-                <p style="color:#999; font-size:12px;">获取失败或近期无新片</p>
-            {% else %}
-                <div class="anime-grid"> {% for movie in movie_list %}
-                    <div class="anime-card">
-                        <div class="anime-cover-box">
-                            <img src="{{ movie.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
-                            <div class="movie-date">{{ movie.date }}</div>
-                        </div>
-                        <div class="anime-title">{{ movie.title }}</div>
-                        <div class="movie-type">{{ movie.type }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% if r18_mode=='1' %}
-        <div class="section">
-            <div class="section-title">DMM今日TOP</div>
-            {% if not dmm_top_list %}
-                <p style="color:#999; font-size:12px;">获取失败</p>
-            {% else %}
-                <div class="jav-grid">
-                    {% for dmm in dmm_top_list[:9] %}
-                    <div class="jav-card">
-                        <div class="jav-cover-box">
-                            <img src="{{ dmm.cover }}" onerror="this.src='https://bgm.tv/img/no_icon_subject.png'">
-                            {% if dmm.jav_id %}
-                            <div class="movie-date" style="background: rgba(240, 98, 146, 0.9);">{{ dmm.jav_id }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="jav-title">{{ dmm.title }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
         <div class="footer">
             Developed by <b>棒棒糖</b> <br>
             Powered by <b>AstrBot</b> <br>
