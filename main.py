@@ -16,7 +16,7 @@ from .fetchers import DataFetcherManager
 from .renderer import ReportRenderer
 
 
-@register("daily_report", "棒棒糖", "每日综合简报插件", "1.6.0")
+@register("daily_report", "棒棒糖", "每日综合简报插件", "1.6.1")
 class DailyReportPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
